@@ -1,0 +1,45 @@
+.file-table-container {
+  overflow-x: auto;
+  flex: 1;
+}
+
+.file-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.file-table th {
+  text-align: left;
+  padding: 8px 12px;
+  background: #fafafa;
+  border-bottom: 2px solid #ddd;
+  font-weight: 600;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.file-table th.sortable {
+  cursor: pointer;
+}
+
+.file-table th.sortable:hover {
+  background: #f0f0f0;
+}
+
+.file-table td {
+  padding: 6px 12px;
+  border-bottom: 1px solid #eee;
+  white-space: nowrap;
+}
+
+.file-table tbody tr:hover {
+  background: #f8f9ff;
+}
+
+.empty-message {
+  text-align: center;
+  padding: 32px !important;
+  color: #999;
+  font-style: italic;
+}

@@ -1,0 +1,49 @@
+.file-row {
+  cursor: default;
+}
+
+.dir-row {
+  cursor: pointer;
+}
+
+.file-name {
+  font-family: monospace;
+}
+
+.dir-name {
+  color: #0066cc;
+  font-weight: 500;
+}
+
+.dir-row:hover .dir-name {
+  text-decoration: underline;
+}
+
+.permission {
+  font-family: monospace;
+  color: #666;
+}
+
+.actions {
+  display: flex;
+  gap: 4px;
+}
+
+.action-btn {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.action-btn:hover {
+  background: #f0f0f0;
+}
+
+.delete-btn:hover {
+  background: #ffe0e0;
+  border-color: #faa;
+}

@@ -1,0 +1,104 @@
+import { useState } from "react";
+import type { HdfsFileStatus } from "../types/hdfs";
+import FileRow from "./FileRow";
+import "./FileTable.css";
+
+type SortKey = "name" | "size" | "modified" | "owner" | "type";
+type SortDir = "asc" | "desc";
+
+interface FileTableProps {
+  files: HdfsFileStatus[];
+  currentPath: string;
+  onNavigate: (path: string) => void;
+  onPreview: (path: string) => void;
+  onDelete: (path: string, name: string) => void;
+}
+
+export default function FileTable({ files, currentPath, onNavigate, onPreview, onDelete }: FileTableProps) {
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  const sorted = [...files].sort((a, b) => {
+    // Directories first
+    if (a.type !== b.type) return a.type === "DIRECTORY" ? -1 : 1;
+
+    let cmp = 0;
+    switch (sortKey) {
+      case "name":
+        cmp = a.pathSuffix.localeCompare(b.pathSuffix);
+        break;
+      case "size":
+        cmp = a.length - b.length;
+        break;
+      case "modified":
+        cmp = a.modificationTime - b.modificationTime;
+        break;
+      case "owner":
+        cmp = a.owner.localeCompare(b.owner);
+        break;
+      case "type":
+        cmp = a.type.localeCompare(b.type);
+        break;
+    }
+    return sortDir === "asc" ? cmp : -cmp;
+  });
+
+  const indicator = (key: SortKey) =>
+    sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : "";
+
+  return (
+    <div className="file-table-container">
+      <table className="file-table">
+        <thead>
+          <tr>
+            <th onClick={() => handleSort("type")} className="sortable" style={{ width: 40 }}>
+              {indicator("type")}
+            </th>
+            <th onClick={() => handleSort("name")} className="sortable">
+              Name{indicator("name")}
+            </th>
+            <th onClick={() => handleSort("size")} className="sortable" style={{ width: 100 }}>
+              Size{indicator("size")}
+            </th>
+            <th onClick={() => handleSort("owner")} className="sortable" style={{ width: 120 }}>
+              Owner{indicator("owner")}
+            </th>
+            <th style={{ width: 100 }}>Permissions</th>
+            <th onClick={() => handleSort("modified")} className="sortable" style={{ width: 180 }}>
+              Modified{indicator("modified")}
+            </th>
+            <th style={{ width: 100 }}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.length === 0 && (
+            <tr>
+              <td colSpan={7} className="empty-message">
+                This directory is empty
+              </td>
+            </tr>
+          )}
+          {sorted.map((file) => (
+            <FileRow
+              key={file.pathSuffix}
+              file={file}
+              currentPath={currentPath}
+              onNavigate={onNavigate}
+              onPreview={onPreview}
+              onDelete={onDelete}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
