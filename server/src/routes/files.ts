@@ -106,6 +106,116 @@ router.delete("/", async (req: Request, res: Response) => {
   }
 });
 
+// ACL sub-routes must be registered before base /acl routes
+router.put("/acl/modify", async (req: Request, res: Response) => {
+  try {
+    const path = req.query.path as string;
+    const aclspec = req.query.aclspec as string;
+    if (!path || !aclspec) {
+      res.status(400).json({ error: "path and aclspec are required" });
+      return;
+    }
+    await hdfs.modifyAclEntries(path, aclspec);
+    res.json({ success: true });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+router.put("/acl/remove", async (req: Request, res: Response) => {
+  try {
+    const path = req.query.path as string;
+    const aclspec = req.query.aclspec as string;
+    if (!path || !aclspec) {
+      res.status(400).json({ error: "path and aclspec are required" });
+      return;
+    }
+    await hdfs.removeAclEntries(path, aclspec);
+    res.json({ success: true });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+router.delete("/acl/default", async (req: Request, res: Response) => {
+  try {
+    const path = req.query.path as string;
+    if (!path) {
+      res.status(400).json({ error: "path is required" });
+      return;
+    }
+    await hdfs.removeDefaultAcl(path);
+    res.json({ success: true });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+router.get("/acl", async (req: Request, res: Response) => {
+  try {
+    const path = req.query.path as string;
+    if (!path) {
+      res.status(400).json({ error: "path is required" });
+      return;
+    }
+    const data = await hdfs.getAclStatus(path);
+    res.json(data);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+router.put("/permission", async (req: Request, res: Response) => {
+  try {
+    const path = req.query.path as string;
+    const permission = req.query.permission as string;
+    if (!path || !permission) {
+      res.status(400).json({ error: "path and permission are required" });
+      return;
+    }
+    await hdfs.setPermission(path, permission);
+    res.json({ success: true });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+router.put("/acl", async (req: Request, res: Response) => {
+  try {
+    const path = req.query.path as string;
+    const aclspec = req.query.aclspec as string;
+    if (!path || !aclspec) {
+      res.status(400).json({ error: "path and aclspec are required" });
+      return;
+    }
+    await hdfs.setAcl(path, aclspec);
+    res.json({ success: true });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+router.delete("/acl", async (req: Request, res: Response) => {
+  try {
+    const path = req.query.path as string;
+    if (!path) {
+      res.status(400).json({ error: "path is required" });
+      return;
+    }
+    await hdfs.removeAcl(path);
+    res.json({ success: true });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
 router.put("/rename", async (req: Request, res: Response) => {
   try {
     const from = req.query.from as string;

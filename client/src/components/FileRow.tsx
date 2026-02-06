@@ -8,6 +8,7 @@ interface FileRowProps {
   onNavigate: (path: string) => void;
   onPreview: (path: string) => void;
   onDelete: (path: string, name: string) => void;
+  onPermissions: (path: string, isDirectory: boolean) => void;
 }
 
 function formatSize(bytes: number): string {
@@ -35,7 +36,7 @@ function isTextFile(name: string): boolean {
   ].includes(ext);
 }
 
-export default function FileRow({ file, currentPath, onNavigate, onPreview, onDelete }: FileRowProps) {
+export default function FileRow({ file, currentPath, onNavigate, onPreview, onDelete, onPermissions }: FileRowProps) {
   const isDir = file.type === "DIRECTORY";
   const fullPath = currentPath === "/" ? `/${file.pathSuffix}` : `${currentPath}/${file.pathSuffix}`;
   const icon = isDir ? "📁" : "📄";
@@ -61,6 +62,11 @@ export default function FileRow({ file, currentPath, onNavigate, onPreview, onDe
     onDelete(fullPath, file.pathSuffix);
   }
 
+  function handlePermissions(e: React.MouseEvent) {
+    e.stopPropagation();
+    onPermissions(fullPath, isDir);
+  }
+
   return (
     <tr className={isDir ? "file-row dir-row" : "file-row"} onClick={handleClick}>
       <td>{icon}</td>
@@ -80,6 +86,9 @@ export default function FileRow({ file, currentPath, onNavigate, onPreview, onDe
             ⬇
           </button>
         )}
+        <button className="action-btn" onClick={handlePermissions} title="Permissions">
+            🔒
+          </button>
         <button className="action-btn delete-btn" onClick={handleDelete} title="Delete">
           ✕
         </button>

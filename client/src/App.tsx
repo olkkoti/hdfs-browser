@@ -7,6 +7,7 @@ import FileTable from "./components/FileTable";
 import Toolbar from "./components/Toolbar";
 import FilePreview from "./components/FilePreview";
 import UploadDialog from "./components/UploadDialog";
+import PermissionsDialog from "./components/PermissionsDialog";
 
 function FileBrowser() {
   const location = useLocation();
@@ -17,6 +18,7 @@ function FileBrowser() {
 
   const [previewPath, setPreviewPath] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [permissionsTarget, setPermissionsTarget] = useState<{ path: string; isDirectory: boolean } | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["listDir", hdfsPath],
@@ -81,6 +83,7 @@ function FileBrowser() {
             onNavigate={handleNavigate}
             onPreview={setPreviewPath}
             onDelete={handleDelete}
+            onPermissions={(path, isDirectory) => setPermissionsTarget({ path, isDirectory })}
           />
         )}
       </main>
@@ -92,6 +95,14 @@ function FileBrowser() {
           currentPath={hdfsPath}
           onClose={() => setShowUpload(false)}
           onUploaded={handleRefresh}
+        />
+      )}
+      {permissionsTarget && (
+        <PermissionsDialog
+          path={permissionsTarget.path}
+          isDirectory={permissionsTarget.isDirectory}
+          onClose={() => setPermissionsTarget(null)}
+          onChanged={handleRefresh}
         />
       )}
     </div>

@@ -1,4 +1,4 @@
-import type { HdfsListResponse, HdfsStatusResponse } from "../types.js";
+import type { HdfsListResponse, HdfsStatusResponse, HdfsAclStatusResponse } from "../types.js";
 
 const NAMENODE_HOST = process.env.HDFS_NAMENODE_HOST || "localhost";
 const NAMENODE_PORT = process.env.HDFS_NAMENODE_PORT || "9870";
@@ -79,5 +79,67 @@ export async function rename(src: string, dest: string): Promise<void> {
   });
   if (!res.ok) {
     throw new Error(`HDFS RENAME failed: ${res.status} ${await res.text()}`);
+  }
+}
+
+export async function getAclStatus(path: string): Promise<HdfsAclStatusResponse> {
+  const res = await fetch(webhdfsUrl(path, "GETACLSTATUS"));
+  if (!res.ok) {
+    throw new Error(`HDFS GETACLSTATUS failed: ${res.status} ${await res.text()}`);
+  }
+  return res.json() as Promise<HdfsAclStatusResponse>;
+}
+
+export async function setPermission(path: string, permission: string): Promise<void> {
+  const res = await fetch(webhdfsUrl(path, "SETPERMISSION", { permission }), {
+    method: "PUT",
+  });
+  if (!res.ok) {
+    throw new Error(`HDFS SETPERMISSION failed: ${res.status} ${await res.text()}`);
+  }
+}
+
+export async function setAcl(path: string, aclspec: string): Promise<void> {
+  const res = await fetch(webhdfsUrl(path, "SETACL", { aclspec }), {
+    method: "PUT",
+  });
+  if (!res.ok) {
+    throw new Error(`HDFS SETACL failed: ${res.status} ${await res.text()}`);
+  }
+}
+
+export async function modifyAclEntries(path: string, aclspec: string): Promise<void> {
+  const res = await fetch(webhdfsUrl(path, "MODIFYACLENTRIES", { aclspec }), {
+    method: "PUT",
+  });
+  if (!res.ok) {
+    throw new Error(`HDFS MODIFYACLENTRIES failed: ${res.status} ${await res.text()}`);
+  }
+}
+
+export async function removeAclEntries(path: string, aclspec: string): Promise<void> {
+  const res = await fetch(webhdfsUrl(path, "REMOVEACLENTRIES", { aclspec }), {
+    method: "PUT",
+  });
+  if (!res.ok) {
+    throw new Error(`HDFS REMOVEACLENTRIES failed: ${res.status} ${await res.text()}`);
+  }
+}
+
+export async function removeAcl(path: string): Promise<void> {
+  const res = await fetch(webhdfsUrl(path, "REMOVEACL"), {
+    method: "PUT",
+  });
+  if (!res.ok) {
+    throw new Error(`HDFS REMOVEACL failed: ${res.status} ${await res.text()}`);
+  }
+}
+
+export async function removeDefaultAcl(path: string): Promise<void> {
+  const res = await fetch(webhdfsUrl(path, "REMOVEDEFAULTACL"), {
+    method: "PUT",
+  });
+  if (!res.ok) {
+    throw new Error(`HDFS REMOVEDEFAULTACL failed: ${res.status} ${await res.text()}`);
   }
 }

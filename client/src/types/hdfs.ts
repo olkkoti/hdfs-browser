@@ -20,3 +20,22 @@ export interface HdfsListResponse {
 export interface HdfsStatusResponse {
   FileStatus: HdfsFileStatus;
 }
+
+export interface HdfsAclStatus {
+  entries: string[];
+  group: string;
+  owner: string;
+  permission: string;
+  stickyBit: boolean;
+}
+
+export interface HdfsAclStatusResponse {
+  AclStatus: HdfsAclStatus;
+}
+
+export interface ParsedAclEntry {
+  scope: "access" | "default";
+  type: "user" | "group" | "mask" | "other";
+  name: string;
+  permission: string;
+}

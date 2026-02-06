@@ -1,4 +1,4 @@
-import type { HdfsListResponse, HdfsStatusResponse } from "../types/hdfs";
+import type { HdfsListResponse, HdfsStatusResponse, HdfsAclStatusResponse } from "../types/hdfs";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
@@ -47,6 +47,50 @@ export function rename(from: string, to: string): Promise<{ success: boolean }> 
     `/api/files/rename?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
     { method: "PUT" }
   );
+}
+
+export function getAclStatus(path: string): Promise<HdfsAclStatusResponse> {
+  return request(`/api/files/acl?path=${encodeURIComponent(path)}`);
+}
+
+export function setPermission(path: string, permission: string): Promise<{ success: boolean }> {
+  return request(
+    `/api/files/permission?path=${encodeURIComponent(path)}&permission=${encodeURIComponent(permission)}`,
+    { method: "PUT" }
+  );
+}
+
+export function setAcl(path: string, aclspec: string): Promise<{ success: boolean }> {
+  return request(
+    `/api/files/acl?path=${encodeURIComponent(path)}&aclspec=${encodeURIComponent(aclspec)}`,
+    { method: "PUT" }
+  );
+}
+
+export function modifyAclEntries(path: string, aclspec: string): Promise<{ success: boolean }> {
+  return request(
+    `/api/files/acl/modify?path=${encodeURIComponent(path)}&aclspec=${encodeURIComponent(aclspec)}`,
+    { method: "PUT" }
+  );
+}
+
+export function removeAclEntries(path: string, aclspec: string): Promise<{ success: boolean }> {
+  return request(
+    `/api/files/acl/remove?path=${encodeURIComponent(path)}&aclspec=${encodeURIComponent(aclspec)}`,
+    { method: "PUT" }
+  );
+}
+
+export function removeAcl(path: string): Promise<{ success: boolean }> {
+  return request(`/api/files/acl?path=${encodeURIComponent(path)}`, {
+    method: "DELETE",
+  });
+}
+
+export function removeDefaultAcl(path: string): Promise<{ success: boolean }> {
+  return request(`/api/files/acl/default?path=${encodeURIComponent(path)}`, {
+    method: "DELETE",
+  });
 }
 
 export async function fetchTextContent(path: string): Promise<string> {

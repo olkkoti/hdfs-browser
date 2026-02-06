@@ -12,9 +12,10 @@ interface FileTableProps {
   onNavigate: (path: string) => void;
   onPreview: (path: string) => void;
   onDelete: (path: string, name: string) => void;
+  onPermissions: (path: string, isDirectory: boolean) => void;
 }
 
-export default function FileTable({ files, currentPath, onNavigate, onPreview, onDelete }: FileTableProps) {
+export default function FileTable({ files, currentPath, onNavigate, onPreview, onDelete, onPermissions }: FileTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -95,6 +96,7 @@ export default function FileTable({ files, currentPath, onNavigate, onPreview, o
               onNavigate={onNavigate}
               onPreview={onPreview}
               onDelete={onDelete}
+              onPermissions={onPermissions}
             />
           ))}
         </tbody>
