@@ -2,7 +2,7 @@
 set -euo pipefail
 
 WEBHDFS="http://localhost:9870/webhdfs/v1"
-USER="user.name=hdfs"
+USER="user.name=hadoop"
 
 echo "Waiting for HDFS to be ready..."
 for i in $(seq 1 30); do
