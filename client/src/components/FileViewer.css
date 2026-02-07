@@ -1,0 +1,268 @@
+.fv-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.fv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid #ddd;
+  background: #f8f9fa;
+}
+
+.fv-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.fv-back-btn {
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.fv-back-btn:hover {
+  background: #e9ecef;
+}
+
+.fv-filename {
+  font-weight: 600;
+  font-family: monospace;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fv-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.fv-header-logout {
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.fv-header-logout:hover {
+  background: #e9ecef;
+}
+
+.fv-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.fv-sidebar {
+  width: 280px;
+  min-width: 280px;
+  border-right: 1px solid #ddd;
+  overflow-y: auto;
+  background: #fafbfc;
+  padding: 16px;
+}
+
+.fv-sidebar-section {
+  margin-bottom: 20px;
+}
+
+.fv-sidebar-section h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #666;
+  margin: 0 0 10px;
+  letter-spacing: 0.5px;
+}
+
+.fv-attr-table {
+  width: 100%;
+  font-size: 13px;
+}
+
+.fv-attr-table td {
+  padding: 3px 0;
+  vertical-align: top;
+}
+
+.fv-attr-table td:first-child {
+  color: #666;
+  white-space: nowrap;
+  padding-right: 12px;
+  width: 90px;
+}
+
+.fv-attr-table td:last-child {
+  word-break: break-all;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.fv-sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fv-action-btn {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+}
+
+.fv-action-btn:hover {
+  background: #e9ecef;
+}
+
+.fv-action-btn.danger {
+  color: #c00;
+  border-color: #e0a0a0;
+}
+
+.fv-action-btn.danger:hover {
+  background: #fff0f0;
+}
+
+.fv-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fv-pagination {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+  font-size: 13px;
+}
+
+.fv-page-btn {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.fv-page-btn:hover:not(:disabled) {
+  background: #e9ecef;
+}
+
+.fv-page-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.fv-page-info {
+  color: #555;
+}
+
+.fv-byte-range {
+  color: #999;
+  font-family: monospace;
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.fv-content-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+}
+
+.fv-text-content {
+  display: table;
+  width: 100%;
+  font-family: monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.fv-text-line {
+  display: table-row;
+}
+
+.fv-line-number {
+  display: table-cell;
+  text-align: right;
+  padding: 0 12px 0 8px;
+  color: #999;
+  user-select: none;
+  white-space: nowrap;
+  border-right: 1px solid #eee;
+  background: #f8f9fa;
+  width: 1px;
+}
+
+.fv-line-content {
+  display: table-cell;
+  padding: 0 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.fv-hex-content {
+  font-family: monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 8px 12px;
+}
+
+.fv-hex-line {
+  white-space: pre;
+}
+
+.fv-hex-offset {
+  color: #999;
+}
+
+.fv-hex-bytes {
+  color: #333;
+}
+
+.fv-hex-ascii {
+  color: #0066cc;
+}
+
+.fv-loading,
+.fv-error {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.fv-error {
+  color: #c00;
+}
+
+.fv-mode-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: #e9ecef;
+  color: #555;
+}

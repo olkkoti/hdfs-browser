@@ -33,6 +33,12 @@ export async function downloadFile(path: string, user?: string): Promise<Respons
   return res;
 }
 
+export async function readFileChunk(path: string, offset: number, length: number, user?: string): Promise<Buffer> {
+  const res = await fetch(webhdfsUrl(path, "OPEN", user, { offset: String(offset), length: String(length) }), { redirect: "follow" });
+  if (!res.ok) throw new Error(`HDFS OPEN failed: ${res.status} ${await res.text()}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
 export async function uploadFile(path: string, data: Uint8Array, filename: string, user?: string): Promise<void> {
   // Step 1: Create request (returns redirect URL)
   const createRes = await fetch(webhdfsUrl(path + "/" + filename, "CREATE", user, { overwrite: "true" }), {

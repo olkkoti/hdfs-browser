@@ -1,8 +1,4 @@
 .file-row {
-  cursor: default;
-}
-
-.dir-row {
   cursor: pointer;
 }
 
@@ -15,7 +11,8 @@
   font-weight: 500;
 }
 
-.dir-row:hover .dir-name {
+.file-row:hover .dir-name,
+.file-row:hover .file-link {
   text-decoration: underline;
 }
 

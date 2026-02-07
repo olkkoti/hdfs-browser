@@ -33,6 +33,14 @@ export interface HdfsAclStatusResponse {
   AclStatus: HdfsAclStatus;
 }
 
+export interface FileContentResponse {
+  data: string;
+  offset: number;
+  length: number;
+  totalSize: number;
+  hasMore: boolean;
+}
+
 export interface ParsedAclEntry {
   scope: "access" | "default";
   type: "user" | "group" | "mask" | "other";

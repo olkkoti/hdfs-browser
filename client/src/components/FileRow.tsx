@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import type { HdfsFileStatus } from "../types/hdfs";
 import { downloadFile } from "../api/hdfs";
 import "./FileRow.css";
@@ -6,7 +7,6 @@ interface FileRowProps {
   file: HdfsFileStatus;
   currentPath: string;
   onNavigate: (path: string) => void;
-  onPreview: (path: string) => void;
   onDelete: (path: string, name: string) => void;
   onPermissions: (path: string, isDirectory: boolean) => void;
 }
@@ -27,16 +27,8 @@ function formatPermission(perm: string): string {
   return perm.padStart(3, "0");
 }
 
-function isTextFile(name: string): boolean {
-  const ext = name.split(".").pop()?.toLowerCase() || "";
-  return [
-    "txt", "log", "md", "json", "xml", "yaml", "yml", "csv", "tsv",
-    "html", "htm", "css", "js", "ts", "py", "java", "sh", "bash",
-    "conf", "cfg", "ini", "properties", "sql", "r", "scala",
-  ].includes(ext);
-}
-
-export default function FileRow({ file, currentPath, onNavigate, onPreview, onDelete, onPermissions }: FileRowProps) {
+export default function FileRow({ file, currentPath, onNavigate, onDelete, onPermissions }: FileRowProps) {
+  const routerNavigate = useNavigate();
   const isDir = file.type === "DIRECTORY";
   const fullPath = currentPath === "/" ? `/${file.pathSuffix}` : `${currentPath}/${file.pathSuffix}`;
   const icon = isDir ? "📁" : "📄";
@@ -44,12 +36,9 @@ export default function FileRow({ file, currentPath, onNavigate, onPreview, onDe
   function handleClick() {
     if (isDir) {
       onNavigate(fullPath);
+    } else {
+      routerNavigate("/view" + fullPath);
     }
-  }
-
-  function handlePreview(e: React.MouseEvent) {
-    e.stopPropagation();
-    onPreview(fullPath);
   }
 
   function handleDownload(e: React.MouseEvent) {
@@ -68,19 +57,14 @@ export default function FileRow({ file, currentPath, onNavigate, onPreview, onDe
   }
 
   return (
-    <tr className={isDir ? "file-row dir-row" : "file-row"} onClick={handleClick}>
+    <tr className="file-row" onClick={handleClick}>
       <td>{icon}</td>
-      <td className={isDir ? "file-name dir-name" : "file-name"}>{file.pathSuffix}</td>
+      <td className={isDir ? "file-name dir-name" : "file-name file-link"}>{file.pathSuffix}</td>
       <td>{isDir ? "-" : formatSize(file.length)}</td>
       <td>{file.owner}</td>
       <td className="permission">{formatPermission(file.permission)}</td>
       <td>{formatDate(file.modificationTime)}</td>
       <td className="actions">
-        {!isDir && isTextFile(file.pathSuffix) && (
-          <button className="action-btn" onClick={handlePreview} title="Preview">
-            👁
-          </button>
-        )}
         {!isDir && (
           <button className="action-btn" onClick={handleDownload} title="Download">
             ⬇

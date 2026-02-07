@@ -32,6 +32,34 @@ router.get("/status", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/content", async (req: Request, res: Response) => {
+  try {
+    const path = req.query.path as string;
+    if (!path) {
+      res.status(400).json({ error: "path is required" });
+      return;
+    }
+    const offset = Math.max(0, parseInt(req.query.offset as string) || 0);
+    const length = Math.min(1048576, Math.max(1, parseInt(req.query.length as string) || 65536));
+    const status = await hdfs.getFileStatus(path, getUser(req));
+    const totalSize = status.FileStatus.length;
+    const chunk = offset < totalSize
+      ? await hdfs.readFileChunk(path, offset, length, getUser(req))
+      : Buffer.alloc(0);
+    const actualLength = chunk.length;
+    res.json({
+      data: chunk.toString("base64"),
+      offset,
+      length: actualLength,
+      totalSize,
+      hasMore: offset + actualLength < totalSize,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
 router.get("/download", async (req: Request, res: Response) => {
   try {
     const path = req.query.path as string;

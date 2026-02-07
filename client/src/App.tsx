@@ -6,7 +6,7 @@ import { useAuth } from "./auth/AuthContext";
 import BreadcrumbNav from "./components/BreadcrumbNav";
 import FileTable from "./components/FileTable";
 import Toolbar from "./components/Toolbar";
-import FilePreview from "./components/FilePreview";
+import FileViewer from "./components/FileViewer";
 import UploadDialog from "./components/UploadDialog";
 import PermissionsDialog from "./components/PermissionsDialog";
 import LoginPage from "./components/LoginPage";
@@ -19,7 +19,6 @@ function FileBrowser() {
 
   const hdfsPath = "/" + (location.pathname.replace(/^\/browse\/?/, "").replace(/\/+$/, ""));
 
-  const [previewPath, setPreviewPath] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [permissionsTarget, setPermissionsTarget] = useState<{ path: string; isDirectory: boolean } | null>(null);
 
@@ -88,15 +87,11 @@ function FileBrowser() {
             files={files}
             currentPath={hdfsPath}
             onNavigate={handleNavigate}
-            onPreview={setPreviewPath}
             onDelete={handleDelete}
             onPermissions={(path, isDirectory) => setPermissionsTarget({ path, isDirectory })}
           />
         )}
       </main>
-      {previewPath && (
-        <FilePreview path={previewPath} onClose={() => setPreviewPath(null)} />
-      )}
       {showUpload && (
         <UploadDialog
           currentPath={hdfsPath}
@@ -130,6 +125,7 @@ function AppContent() {
   return (
     <Routes>
       <Route path="/browse/*" element={<FileBrowser />} />
+      <Route path="/view/*" element={<FileViewer />} />
       <Route path="*" element={<FileBrowser />} />
     </Routes>
   );

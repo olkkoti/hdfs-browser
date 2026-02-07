@@ -1,4 +1,4 @@
-import type { HdfsListResponse, HdfsStatusResponse, HdfsAclStatusResponse } from "../types/hdfs";
+import type { HdfsListResponse, HdfsStatusResponse, HdfsAclStatusResponse, FileContentResponse } from "../types/hdfs";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, credentials: "include" });
@@ -93,10 +93,6 @@ export function removeDefaultAcl(path: string): Promise<{ success: boolean }> {
   });
 }
 
-export async function fetchTextContent(path: string): Promise<string> {
-  const res = await fetch(`/api/files/download?path=${encodeURIComponent(path)}`, {
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error(`Failed to fetch file: ${res.status}`);
-  return res.text();
+export function fetchFileContent(path: string, offset = 0, length = 65536): Promise<FileContentResponse> {
+  return request(`/api/files/content?path=${encodeURIComponent(path)}&offset=${offset}&length=${length}`);
 }
