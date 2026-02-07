@@ -11,6 +11,7 @@
   padding: 12px 20px;
   border-bottom: 1px solid #ddd;
   background: #f8f9fa;
+  flex-shrink: 0;
 }
 
 .fv-header-left {
@@ -113,6 +114,32 @@
   font-size: 12px;
 }
 
+.fv-acl-table {
+  width: 100%;
+  font-size: 12px;
+  font-family: monospace;
+  border-collapse: collapse;
+}
+
+.fv-acl-table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  color: #666;
+  padding: 2px 8px 2px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.fv-acl-table td {
+  padding: 2px 8px 2px 0;
+}
+
+.fv-acl-table td:last-child,
+.fv-acl-table th:last-child {
+  text-align: right;
+  padding-right: 0;
+}
+
 .fv-sidebar-actions {
   display: flex;
   flex-direction: column;
@@ -146,6 +173,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -157,6 +185,7 @@
   border-bottom: 1px solid #eee;
   background: #f8f9fa;
   font-size: 13px;
+  flex-shrink: 0;
 }
 
 .fv-page-btn {
@@ -177,19 +206,24 @@
   cursor: default;
 }
 
-.fv-page-info {
-  color: #555;
-}
-
 .fv-byte-range {
-  color: #999;
+  color: #555;
   font-family: monospace;
   font-size: 12px;
-  margin-left: auto;
+}
+
+.fv-jump-input {
+  width: 100px;
+  padding: 3px 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
 }
 
 .fv-content-body {
   flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 0;
 }

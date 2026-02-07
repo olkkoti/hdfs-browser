@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { getFileStatus, fetchFileContent, downloadFile, deleteFile } from "../api/hdfs";
+import { getFileStatus, getAclStatus, fetchFileContent, downloadFile, deleteFile } from "../api/hdfs";
 import { useAuth } from "../auth/AuthContext";
 import { base64ToBytes, isBinaryContent } from "../utils/binary";
 import { hexDump } from "../utils/hexdump";
+import { parseAclEntry } from "../utils/acl";
 import PermissionsDialog from "./PermissionsDialog";
 import "./FileViewer.css";
 
@@ -44,6 +45,11 @@ export default function FileViewer() {
     queryFn: () => getFileStatus(hdfsPath),
   });
 
+  const { data: aclData } = useQuery({
+    queryKey: ["aclStatus", hdfsPath],
+    queryFn: () => getAclStatus(hdfsPath),
+  });
+
   const { data: contentData, isLoading: contentLoading, error: contentError } = useQuery({
     queryKey: ["fileContent", hdfsPath, offset],
     queryFn: async () => {
@@ -56,10 +62,10 @@ export default function FileViewer() {
     },
   });
 
+  const [jumpInput, setJumpInput] = useState("");
+
   const fileStatus = statusData?.FileStatus;
   const totalSize = fileStatus?.length ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalSize / PAGE_SIZE));
-  const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
 
   function handlePrev() {
     setOffset(Math.max(0, offset - PAGE_SIZE));
@@ -69,6 +75,14 @@ export default function FileViewer() {
     if (contentData?.hasMore) {
       setOffset(offset + PAGE_SIZE);
     }
+  }
+
+  function handleJump() {
+    const target = parseInt(jumpInput, 10);
+    if (isNaN(target) || target < 0) return;
+    const clamped = Math.min(target, Math.max(0, totalSize - 1));
+    setOffset(clamped);
+    setJumpInput("");
   }
 
   function handleBack() {
@@ -172,6 +186,30 @@ export default function FileViewer() {
             )}
           </div>
 
+          {aclData && (
+            <div className="fv-sidebar-section">
+              <h3>Access Control</h3>
+              <table className="fv-acl-table">
+                <thead>
+                  <tr><th>Entry</th><th>Perm</th></tr>
+                </thead>
+                <tbody>
+                  {aclData.AclStatus.entries.map((entry, i) => {
+                    const parsed = parseAclEntry(entry);
+                    const label = parsed.scope === "default" ? `default:${parsed.type}` : parsed.type;
+                    const name = parsed.name || "(base)";
+                    return (
+                      <tr key={i}>
+                        <td>{label}:{name}</td>
+                        <td>{parsed.permission}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           <div className="fv-sidebar-section">
             <h3>Actions</h3>
             <div className="fv-sidebar-actions">
@@ -187,11 +225,19 @@ export default function FileViewer() {
           {!isLoading && !error && totalSize > 0 && (
             <div className="fv-pagination">
               <button className="fv-page-btn" onClick={handlePrev} disabled={offset === 0}>Prev</button>
-              <span className="fv-page-info">Page {currentPage} of {totalPages}</span>
-              <button className="fv-page-btn" onClick={handleNext} disabled={!contentData?.hasMore}>Next</button>
               <span className="fv-byte-range">
-                {offset.toLocaleString()}&ndash;{Math.min(offset + PAGE_SIZE, totalSize).toLocaleString()} of {totalSize.toLocaleString()} bytes
+                {offset.toLocaleString()}&ndash;{Math.min(offset + (contentData?.length ?? PAGE_SIZE), totalSize).toLocaleString()} of {totalSize.toLocaleString()} bytes
               </span>
+              <button className="fv-page-btn" onClick={handleNext} disabled={!contentData?.hasMore}>Next</button>
+              <input
+                className="fv-jump-input"
+                type="text"
+                placeholder="Offset"
+                value={jumpInput}
+                onChange={(e) => setJumpInput(e.target.value.replace(/[^0-9]/g, ""))}
+                onKeyDown={(e) => e.key === "Enter" && handleJump()}
+              />
+              <button className="fv-page-btn" onClick={handleJump}>Go</button>
             </div>
           )}
 
