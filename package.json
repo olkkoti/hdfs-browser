@@ -13,9 +13,12 @@
     "hdfs:start": "docker compose up -d",
     "hdfs:stop": "docker compose down",
     "hdfs:seed": "bash scripts/seed-hdfs.sh",
-    "hdfs:reset": "docker compose down -v && docker compose up -d"
+    "hdfs:reset": "docker compose down -v && docker compose up -d",
+    "e2e": "bash scripts/run-e2e.sh",
+    "e2e:down": "docker compose -f docker-compose.e2e.yml down -v"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "concurrently": "^9.1.0"
   }
 }

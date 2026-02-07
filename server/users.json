@@ -1,6 +1,7 @@
 {
   "users": [
     { "username": "hdfs", "password": "hdfs" },
-    { "username": "alice", "password": "alice123" }
+    { "username": "alice", "password": "alice123" },
+    { "username": "hadoop", "password": "hadoop" }
   ]
 }

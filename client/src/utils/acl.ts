@@ -38,11 +38,12 @@ export function serializeAclEntry(entry: ParsedAclEntry): string {
 }
 
 /**
- * Serialize entry without permissions (for removal operations)
+ * Serialize entry without permissions (for removal operations).
+ * Format: "user:alice:" — trailing colon required by WebHDFS REMOVEACLENTRIES.
  */
 export function serializeAclEntryForRemoval(entry: ParsedAclEntry): string {
   const prefix = entry.scope === "default" ? "default:" : "";
-  return `${prefix}${entry.type}:${entry.name}`;
+  return `${prefix}${entry.type}:${entry.name}:`;
 }
 
 /**

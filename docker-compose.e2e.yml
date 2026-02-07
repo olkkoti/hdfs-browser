@@ -1,0 +1,69 @@
+services:
+  namenode:
+    image: apache/hadoop:3.4.2
+    platform: linux/amd64
+    hostname: namenode
+    command: ["hdfs", "namenode"]
+    environment:
+      ENSURE_NAMENODE_DIR: /tmp/hadoop-hadoop/dfs/name
+    env_file:
+      - ./hadoop-e2e.env
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9870/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  datanode:
+    image: apache/hadoop:3.4.2
+    platform: linux/amd64
+    hostname: datanode
+    command: ["hdfs", "datanode"]
+    env_file:
+      - ./hadoop-e2e.env
+    depends_on:
+      namenode:
+        condition: service_healthy
+
+  hdfs-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.e2e
+    environment:
+      HDFS_NAMENODE_HOST: namenode
+      HDFS_NAMENODE_PORT: "9870"
+      HDFS_USER: hadoop
+      PORT: "3001"
+    depends_on:
+      datanode:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3001/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  seed:
+    image: curlimages/curl:latest
+    depends_on:
+      hdfs-app:
+        condition: service_healthy
+    volumes:
+      - ./scripts/seed-hdfs-e2e.sh:/seed.sh:ro
+    entrypoint: ["sh", "/seed.sh"]
+
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.58.2-noble
+    working_dir: /work
+    environment:
+      BASE_URL: http://hdfs-app:3001
+    volumes:
+      - .:/work
+      - ./test-results:/work/test-results
+      - ./playwright-report:/work/playwright-report
+    entrypoint: ["sh", "-c", "npm ci --ignore-scripts && npx playwright test"]
+    depends_on:
+      seed:
+        condition: service_completed_successfully

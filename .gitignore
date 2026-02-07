@@ -7,3 +7,5 @@ dist/
 *.iml
 *.tsbuildinfo
 .claude/
+test-results/
+playwright-report/
