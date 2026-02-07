@@ -2,17 +2,20 @@ import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { listDirectory, mkdir, deleteFile as apiDeleteFile } from "./api/hdfs";
+import { useAuth } from "./auth/AuthContext";
 import BreadcrumbNav from "./components/BreadcrumbNav";
 import FileTable from "./components/FileTable";
 import Toolbar from "./components/Toolbar";
 import FilePreview from "./components/FilePreview";
 import UploadDialog from "./components/UploadDialog";
 import PermissionsDialog from "./components/PermissionsDialog";
+import LoginPage from "./components/LoginPage";
 
 function FileBrowser() {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user, logout } = useAuth();
 
   const hdfsPath = "/" + (location.pathname.replace(/^\/browse\/?/, "").replace(/\/+$/, ""));
 
@@ -62,6 +65,10 @@ function FileBrowser() {
     <div className="app">
       <header className="app-header">
         <h1>HDFS Browser</h1>
+        <div className="app-header-user">
+          <span>Signed in as {user}</span>
+          <button className="app-header-logout" onClick={logout}>Sign out</button>
+        </div>
       </header>
       <BreadcrumbNav path={hdfsPath} onNavigate={handleNavigate} />
       <Toolbar
@@ -109,11 +116,25 @@ function FileBrowser() {
   );
 }
 
-export default function App() {
+function AppContent() {
+  const { user, loading, login } = useAuth();
+
+  if (loading) {
+    return <div className="status-message">Loading...</div>;
+  }
+
+  if (!user) {
+    return <LoginPage onLogin={login} />;
+  }
+
   return (
     <Routes>
       <Route path="/browse/*" element={<FileBrowser />} />
       <Route path="*" element={<FileBrowser />} />
     </Routes>
   );
+}
+
+export default function App() {
+  return <AppContent />;
 }

@@ -1,14 +1,19 @@
 import { Router, type Request, type Response } from "express";
 import multer from "multer";
 import * as hdfs from "../services/hdfs.js";
+import "../middleware/auth.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
 const router = Router();
 
+function getUser(req: Request): string {
+  return req.session.user!.username;
+}
+
 router.get("/list", async (req: Request, res: Response) => {
   try {
     const path = (req.query.path as string) || "/";
-    const data = await hdfs.listDirectory(path);
+    const data = await hdfs.listDirectory(path, getUser(req));
     res.json(data);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -19,7 +24,7 @@ router.get("/list", async (req: Request, res: Response) => {
 router.get("/status", async (req: Request, res: Response) => {
   try {
     const path = (req.query.path as string) || "/";
-    const data = await hdfs.getFileStatus(path);
+    const data = await hdfs.getFileStatus(path, getUser(req));
     res.json(data);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -34,7 +39,7 @@ router.get("/download", async (req: Request, res: Response) => {
       res.status(400).json({ error: "path is required" });
       return;
     }
-    const hdfsRes = await hdfs.downloadFile(path);
+    const hdfsRes = await hdfs.downloadFile(path, getUser(req));
     const filename = path.split("/").pop() || "download";
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.setHeader("Content-Type", "application/octet-stream");
@@ -68,7 +73,7 @@ router.post("/upload", upload.single("file"), async (req: Request, res: Response
       res.status(400).json({ error: "No file provided" });
       return;
     }
-    await hdfs.uploadFile(path, req.file.buffer, req.file.originalname);
+    await hdfs.uploadFile(path, req.file.buffer, req.file.originalname, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -83,7 +88,7 @@ router.put("/mkdir", async (req: Request, res: Response) => {
       res.status(400).json({ error: "path is required" });
       return;
     }
-    await hdfs.mkdirs(path);
+    await hdfs.mkdirs(path, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -98,7 +103,7 @@ router.delete("/", async (req: Request, res: Response) => {
       res.status(400).json({ error: "path is required" });
       return;
     }
-    await hdfs.deleteFile(path);
+    await hdfs.deleteFile(path, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -115,7 +120,7 @@ router.put("/acl/modify", async (req: Request, res: Response) => {
       res.status(400).json({ error: "path and aclspec are required" });
       return;
     }
-    await hdfs.modifyAclEntries(path, aclspec);
+    await hdfs.modifyAclEntries(path, aclspec, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -131,7 +136,7 @@ router.put("/acl/remove", async (req: Request, res: Response) => {
       res.status(400).json({ error: "path and aclspec are required" });
       return;
     }
-    await hdfs.removeAclEntries(path, aclspec);
+    await hdfs.removeAclEntries(path, aclspec, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -146,7 +151,7 @@ router.delete("/acl/default", async (req: Request, res: Response) => {
       res.status(400).json({ error: "path is required" });
       return;
     }
-    await hdfs.removeDefaultAcl(path);
+    await hdfs.removeDefaultAcl(path, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -161,7 +166,7 @@ router.get("/acl", async (req: Request, res: Response) => {
       res.status(400).json({ error: "path is required" });
       return;
     }
-    const data = await hdfs.getAclStatus(path);
+    const data = await hdfs.getAclStatus(path, getUser(req));
     res.json(data);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -177,7 +182,7 @@ router.put("/permission", async (req: Request, res: Response) => {
       res.status(400).json({ error: "path and permission are required" });
       return;
     }
-    await hdfs.setPermission(path, permission);
+    await hdfs.setPermission(path, permission, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -193,7 +198,7 @@ router.put("/acl", async (req: Request, res: Response) => {
       res.status(400).json({ error: "path and aclspec are required" });
       return;
     }
-    await hdfs.setAcl(path, aclspec);
+    await hdfs.setAcl(path, aclspec, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -208,7 +213,7 @@ router.delete("/acl", async (req: Request, res: Response) => {
       res.status(400).json({ error: "path is required" });
       return;
     }
-    await hdfs.removeAcl(path);
+    await hdfs.removeAcl(path, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -224,7 +229,7 @@ router.put("/rename", async (req: Request, res: Response) => {
       res.status(400).json({ error: "from and to are required" });
       return;
     }
-    await hdfs.rename(from, to);
+    await hdfs.rename(from, to, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";

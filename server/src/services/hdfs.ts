@@ -2,40 +2,40 @@ import type { HdfsListResponse, HdfsStatusResponse, HdfsAclStatusResponse } from
 
 const NAMENODE_HOST = process.env.HDFS_NAMENODE_HOST || "localhost";
 const NAMENODE_PORT = process.env.HDFS_NAMENODE_PORT || "9870";
-const HDFS_USER = process.env.HDFS_USER || "hdfs";
+const DEFAULT_HDFS_USER = process.env.HDFS_USER || "hdfs";
 
-function webhdfsUrl(path: string, op: string, extra?: Record<string, string>): string {
-  const params = new URLSearchParams({ op, "user.name": HDFS_USER, ...extra });
+function webhdfsUrl(path: string, op: string, user?: string, extra?: Record<string, string>): string {
+  const params = new URLSearchParams({ op, "user.name": user || DEFAULT_HDFS_USER, ...extra });
   return `http://${NAMENODE_HOST}:${NAMENODE_PORT}/webhdfs/v1${path}?${params}`;
 }
 
-export async function listDirectory(path: string): Promise<HdfsListResponse> {
-  const res = await fetch(webhdfsUrl(path, "LISTSTATUS"));
+export async function listDirectory(path: string, user?: string): Promise<HdfsListResponse> {
+  const res = await fetch(webhdfsUrl(path, "LISTSTATUS", user));
   if (!res.ok) {
     throw new Error(`HDFS LISTSTATUS failed: ${res.status} ${await res.text()}`);
   }
   return res.json() as Promise<HdfsListResponse>;
 }
 
-export async function getFileStatus(path: string): Promise<HdfsStatusResponse> {
-  const res = await fetch(webhdfsUrl(path, "GETFILESTATUS"));
+export async function getFileStatus(path: string, user?: string): Promise<HdfsStatusResponse> {
+  const res = await fetch(webhdfsUrl(path, "GETFILESTATUS", user));
   if (!res.ok) {
     throw new Error(`HDFS GETFILESTATUS failed: ${res.status} ${await res.text()}`);
   }
   return res.json() as Promise<HdfsStatusResponse>;
 }
 
-export async function downloadFile(path: string): Promise<Response> {
-  const res = await fetch(webhdfsUrl(path, "OPEN"), { redirect: "follow" });
+export async function downloadFile(path: string, user?: string): Promise<Response> {
+  const res = await fetch(webhdfsUrl(path, "OPEN", user), { redirect: "follow" });
   if (!res.ok) {
     throw new Error(`HDFS OPEN failed: ${res.status} ${await res.text()}`);
   }
   return res;
 }
 
-export async function uploadFile(path: string, data: Uint8Array, filename: string): Promise<void> {
+export async function uploadFile(path: string, data: Uint8Array, filename: string, user?: string): Promise<void> {
   // Step 1: Create request (returns redirect URL)
-  const createRes = await fetch(webhdfsUrl(path + "/" + filename, "CREATE", { overwrite: "true" }), {
+  const createRes = await fetch(webhdfsUrl(path + "/" + filename, "CREATE", user, { overwrite: "true" }), {
     method: "PUT",
     redirect: "manual",
   });
@@ -57,15 +57,15 @@ export async function uploadFile(path: string, data: Uint8Array, filename: strin
   }
 }
 
-export async function mkdirs(path: string): Promise<void> {
-  const res = await fetch(webhdfsUrl(path, "MKDIRS"), { method: "PUT" });
+export async function mkdirs(path: string, user?: string): Promise<void> {
+  const res = await fetch(webhdfsUrl(path, "MKDIRS", user), { method: "PUT" });
   if (!res.ok) {
     throw new Error(`HDFS MKDIRS failed: ${res.status} ${await res.text()}`);
   }
 }
 
-export async function deleteFile(path: string, recursive = true): Promise<void> {
-  const res = await fetch(webhdfsUrl(path, "DELETE", { recursive: String(recursive) }), {
+export async function deleteFile(path: string, user?: string, recursive = true): Promise<void> {
+  const res = await fetch(webhdfsUrl(path, "DELETE", user, { recursive: String(recursive) }), {
     method: "DELETE",
   });
   if (!res.ok) {
@@ -73,8 +73,8 @@ export async function deleteFile(path: string, recursive = true): Promise<void> 
   }
 }
 
-export async function rename(src: string, dest: string): Promise<void> {
-  const res = await fetch(webhdfsUrl(src, "RENAME", { destination: dest }), {
+export async function rename(src: string, dest: string, user?: string): Promise<void> {
+  const res = await fetch(webhdfsUrl(src, "RENAME", user, { destination: dest }), {
     method: "PUT",
   });
   if (!res.ok) {
@@ -82,16 +82,16 @@ export async function rename(src: string, dest: string): Promise<void> {
   }
 }
 
-export async function getAclStatus(path: string): Promise<HdfsAclStatusResponse> {
-  const res = await fetch(webhdfsUrl(path, "GETACLSTATUS"));
+export async function getAclStatus(path: string, user?: string): Promise<HdfsAclStatusResponse> {
+  const res = await fetch(webhdfsUrl(path, "GETACLSTATUS", user));
   if (!res.ok) {
     throw new Error(`HDFS GETACLSTATUS failed: ${res.status} ${await res.text()}`);
   }
   return res.json() as Promise<HdfsAclStatusResponse>;
 }
 
-export async function setPermission(path: string, permission: string): Promise<void> {
-  const res = await fetch(webhdfsUrl(path, "SETPERMISSION", { permission }), {
+export async function setPermission(path: string, permission: string, user?: string): Promise<void> {
+  const res = await fetch(webhdfsUrl(path, "SETPERMISSION", user, { permission }), {
     method: "PUT",
   });
   if (!res.ok) {
@@ -99,8 +99,8 @@ export async function setPermission(path: string, permission: string): Promise<v
   }
 }
 
-export async function setAcl(path: string, aclspec: string): Promise<void> {
-  const res = await fetch(webhdfsUrl(path, "SETACL", { aclspec }), {
+export async function setAcl(path: string, aclspec: string, user?: string): Promise<void> {
+  const res = await fetch(webhdfsUrl(path, "SETACL", user, { aclspec }), {
     method: "PUT",
   });
   if (!res.ok) {
@@ -108,8 +108,8 @@ export async function setAcl(path: string, aclspec: string): Promise<void> {
   }
 }
 
-export async function modifyAclEntries(path: string, aclspec: string): Promise<void> {
-  const res = await fetch(webhdfsUrl(path, "MODIFYACLENTRIES", { aclspec }), {
+export async function modifyAclEntries(path: string, aclspec: string, user?: string): Promise<void> {
+  const res = await fetch(webhdfsUrl(path, "MODIFYACLENTRIES", user, { aclspec }), {
     method: "PUT",
   });
   if (!res.ok) {
@@ -117,8 +117,8 @@ export async function modifyAclEntries(path: string, aclspec: string): Promise<v
   }
 }
 
-export async function removeAclEntries(path: string, aclspec: string): Promise<void> {
-  const res = await fetch(webhdfsUrl(path, "REMOVEACLENTRIES", { aclspec }), {
+export async function removeAclEntries(path: string, aclspec: string, user?: string): Promise<void> {
+  const res = await fetch(webhdfsUrl(path, "REMOVEACLENTRIES", user, { aclspec }), {
     method: "PUT",
   });
   if (!res.ok) {
@@ -126,8 +126,8 @@ export async function removeAclEntries(path: string, aclspec: string): Promise<v
   }
 }
 
-export async function removeAcl(path: string): Promise<void> {
-  const res = await fetch(webhdfsUrl(path, "REMOVEACL"), {
+export async function removeAcl(path: string, user?: string): Promise<void> {
+  const res = await fetch(webhdfsUrl(path, "REMOVEACL", user), {
     method: "PUT",
   });
   if (!res.ok) {
@@ -135,8 +135,8 @@ export async function removeAcl(path: string): Promise<void> {
   }
 }
 
-export async function removeDefaultAcl(path: string): Promise<void> {
-  const res = await fetch(webhdfsUrl(path, "REMOVEDEFAULTACL"), {
+export async function removeDefaultAcl(path: string, user?: string): Promise<void> {
+  const res = await fetch(webhdfsUrl(path, "REMOVEDEFAULTACL", user), {
     method: "PUT",
   });
   if (!res.ok) {
