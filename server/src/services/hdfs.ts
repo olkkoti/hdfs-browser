@@ -1,3 +1,4 @@
+import http from "http";
 import type { HdfsListResponse, HdfsStatusResponse, HdfsAclStatusResponse } from "../types.js";
 
 const NAMENODE_HOST = process.env.HDFS_NAMENODE_HOST || "localhost";
@@ -46,20 +47,34 @@ export async function uploadFile(path: string, data: Uint8Array, filename: strin
     redirect: "manual",
   });
 
+  // Consume the response body to free the connection
+  await createRes.text();
+
   const location = createRes.headers.get("location");
   if (!location) {
     throw new Error(`HDFS CREATE did not return redirect location: ${createRes.status}`);
   }
 
-  // Step 2: Send data to datanode
-  const uploadRes = await fetch(location, {
-    method: "PUT",
-    body: data as unknown as BodyInit,
-    headers: { "Content-Type": "application/octet-stream" },
+  // Step 2: Send data to datanode using http.request
+  // (Node.js native fetch/undici rejects the datanode's non-compliant HTTP response)
+  const status = await new Promise<number>((resolve, reject) => {
+    const parsed = new URL(location);
+    const req = http.request({
+      hostname: parsed.hostname,
+      port: parsed.port,
+      path: parsed.pathname + parsed.search,
+      method: "PUT",
+      headers: { "Content-Type": "application/octet-stream", "Content-Length": data.length },
+    }, (res) => {
+      res.resume();
+      resolve(res.statusCode ?? 0);
+    });
+    req.on("error", reject);
+    req.end(data);
   });
 
-  if (!uploadRes.ok && uploadRes.status !== 201) {
-    throw new Error(`HDFS upload failed: ${uploadRes.status} ${await uploadRes.text()}`);
+  if (status !== 200 && status !== 201) {
+    throw new Error(`HDFS upload failed: ${status}`);
   }
 }
 
