@@ -9,6 +9,7 @@ interface FileRowProps {
   onNavigate: (path: string) => void;
   onDelete: (path: string, name: string) => void;
   onPermissions: (path: string, isDirectory: boolean) => void;
+  isDotEntry?: boolean;
 }
 
 function formatSize(bytes: number): string {
@@ -27,13 +28,22 @@ function formatPermission(perm: string): string {
   return perm.padStart(3, "0");
 }
 
-export default function FileRow({ file, currentPath, onNavigate, onDelete, onPermissions }: FileRowProps) {
+export default function FileRow({ file, currentPath, onNavigate, onDelete, onPermissions, isDotEntry }: FileRowProps) {
   const routerNavigate = useNavigate();
   const isDir = file.type === "DIRECTORY";
   const fullPath = currentPath === "/" ? `/${file.pathSuffix}` : `${currentPath}/${file.pathSuffix}`;
   const icon = isDir ? "📁" : "📄";
 
   function handleClick() {
+    if (isDotEntry) {
+      if (file.pathSuffix === "..") {
+        const parent = currentPath.substring(0, currentPath.lastIndexOf("/")) || "/";
+        onNavigate(parent);
+      } else {
+        onNavigate(currentPath);
+      }
+      return;
+    }
     if (isDir) {
       onNavigate(fullPath);
     } else {
@@ -53,29 +63,40 @@ export default function FileRow({ file, currentPath, onNavigate, onDelete, onPer
 
   function handlePermissions(e: React.MouseEvent) {
     e.stopPropagation();
+    if (isDotEntry) {
+      if (file.pathSuffix === "..") {
+        const parent = currentPath.substring(0, currentPath.lastIndexOf("/")) || "/";
+        onPermissions(parent, true);
+      } else {
+        onPermissions(currentPath, true);
+      }
+      return;
+    }
     onPermissions(fullPath, isDir);
   }
 
   return (
     <tr className="file-row" onClick={handleClick}>
       <td>{icon}</td>
-      <td className={isDir ? "file-name dir-name" : "file-name file-link"}>{file.pathSuffix}</td>
-      <td>{isDir ? "-" : formatSize(file.length)}</td>
-      <td>{file.owner}</td>
-      <td className="permission">{formatPermission(file.permission)}</td>
-      <td>{formatDate(file.modificationTime)}</td>
+      <td className={isDotEntry || isDir ? "file-name dir-name" : "file-name file-link"}>{file.pathSuffix}</td>
+      <td>{isDotEntry ? "" : isDir ? "-" : formatSize(file.length)}</td>
+      <td>{isDotEntry && !file.owner ? "" : file.owner}</td>
+      <td className="permission">{isDotEntry && !file.permission ? "" : formatPermission(file.permission)}</td>
+      <td>{isDotEntry && !file.modificationTime ? "" : formatDate(file.modificationTime)}</td>
       <td className="actions">
-        {!isDir && (
+        {!isDotEntry && !isDir && (
           <button className="action-btn" onClick={handleDownload} title="Download">
             ⬇
           </button>
         )}
         <button className="action-btn" onClick={handlePermissions} title="Permissions">
-            🔒
-          </button>
-        <button className="action-btn delete-btn" onClick={handleDelete} title="Delete">
-          ✕
+          🔒
         </button>
+        {!isDotEntry && (
+          <button className="action-btn delete-btn" onClick={handleDelete} title="Delete">
+            ✕
+          </button>
+        )}
       </td>
     </tr>
   );

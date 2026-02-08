@@ -1,7 +1,7 @@
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { listDirectory, mkdir, deleteFile as apiDeleteFile } from "./api/hdfs";
+import { listDirectory, getFileStatus, mkdir, deleteFile as apiDeleteFile } from "./api/hdfs";
 import { useAuth } from "./auth/AuthContext";
 import BreadcrumbNav from "./components/BreadcrumbNav";
 import FileTable from "./components/FileTable";
@@ -25,6 +25,19 @@ function FileBrowser() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["listDir", hdfsPath],
     queryFn: () => listDirectory(hdfsPath),
+  });
+
+  const { data: statusData } = useQuery({
+    queryKey: ["fileStatus", hdfsPath],
+    queryFn: () => getFileStatus(hdfsPath),
+  });
+
+  const parentPath = hdfsPath === "/" ? null : (hdfsPath.substring(0, hdfsPath.lastIndexOf("/")) || "/");
+
+  const { data: parentStatusData } = useQuery({
+    queryKey: ["fileStatus", parentPath],
+    queryFn: () => getFileStatus(parentPath!),
+    enabled: parentPath !== null,
   });
 
   function handleNavigate(path: string) {
@@ -86,6 +99,8 @@ function FileBrowser() {
           <FileTable
             files={files}
             currentPath={hdfsPath}
+            currentDirStatus={statusData?.FileStatus}
+            parentDirStatus={parentStatusData?.FileStatus}
             onNavigate={handleNavigate}
             onDelete={handleDelete}
             onPermissions={(path, isDirectory) => setPermissionsTarget({ path, isDirectory })}

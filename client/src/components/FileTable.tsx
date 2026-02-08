@@ -9,12 +9,14 @@ type SortDir = "asc" | "desc";
 interface FileTableProps {
   files: HdfsFileStatus[];
   currentPath: string;
+  currentDirStatus?: HdfsFileStatus;
+  parentDirStatus?: HdfsFileStatus;
   onNavigate: (path: string) => void;
   onDelete: (path: string, name: string) => void;
   onPermissions: (path: string, isDirectory: boolean) => void;
 }
 
-export default function FileTable({ files, currentPath, onNavigate, onDelete, onPermissions }: FileTableProps) {
+export default function FileTable({ files, currentPath, currentDirStatus, parentDirStatus, onNavigate, onDelete, onPermissions }: FileTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -52,6 +54,38 @@ export default function FileTable({ files, currentPath, onNavigate, onDelete, on
     return sortDir === "asc" ? cmp : -cmp;
   });
 
+  const dotEntry: HdfsFileStatus = currentDirStatus
+    ? { ...currentDirStatus, pathSuffix: "." }
+    : {
+        pathSuffix: ".",
+        type: "DIRECTORY",
+        length: 0,
+        owner: "",
+        group: "",
+        permission: "",
+        accessTime: 0,
+        modificationTime: 0,
+        blockSize: 0,
+        replication: 0,
+      };
+
+  const dotDotEntry: HdfsFileStatus = parentDirStatus
+    ? { ...parentDirStatus, pathSuffix: ".." }
+    : {
+        pathSuffix: "..",
+        type: "DIRECTORY",
+        length: 0,
+        owner: "",
+        group: "",
+        permission: "",
+        accessTime: 0,
+        modificationTime: 0,
+        blockSize: 0,
+        replication: 0,
+      };
+
+  const dotEntries = currentPath === "/" ? [dotEntry] : [dotEntry, dotDotEntry];
+
   const indicator = (key: SortKey) =>
     sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : "";
 
@@ -80,13 +114,17 @@ export default function FileTable({ files, currentPath, onNavigate, onDelete, on
           </tr>
         </thead>
         <tbody>
-          {sorted.length === 0 && (
-            <tr>
-              <td colSpan={7} className="empty-message">
-                This directory is empty
-              </td>
-            </tr>
-          )}
+          {dotEntries.map((entry) => (
+            <FileRow
+              key={entry.pathSuffix}
+              file={entry}
+              currentPath={currentPath}
+              onNavigate={onNavigate}
+              onDelete={onDelete}
+              onPermissions={onPermissions}
+              isDotEntry
+            />
+          ))}
           {sorted.map((file) => (
             <FileRow
               key={file.pathSuffix}
