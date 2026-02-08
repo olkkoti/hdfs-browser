@@ -37,6 +37,22 @@ Copy `.env.example` to `.env` and configure:
 - `HDFS_NAMENODE_PORT` — WebHDFS port (default: 9870)
 - `HDFS_USER` — HDFS user (default: hdfs)
 - `PORT` — Express server port (default: 3001)
+- `HDFS_AUTH` — authentication mode: `simple` or `kerberos` (default: simple)
+- `HDFS_PROTOCOL` — `http` or `https` (default: http)
+- `KRB5_PRINCIPAL` — Kerberos service principal (e.g. `hdfs-browser/host@REALM`)
+- `KRB5_KEYTAB` — path to the keytab file for the service principal
+
+### Kerberos configuration
+
+To connect to a Kerberos-secured HDFS cluster:
+
+1. Set `HDFS_AUTH=kerberos` and `HDFS_PROTOCOL=https` (if HDFS uses HTTPS)
+2. Provide `KRB5_PRINCIPAL` and `KRB5_KEYTAB` for the service account
+3. The service account must be configured as a proxy user in HDFS (`hadoop.proxyuser.<name>.hosts/groups`)
+4. The app uses `kinit` at startup and SPNEGO tokens per-request to the NameNode
+5. User impersonation is done via the `doas` query parameter (instead of `user.name` in simple mode)
+6. DataNode requests use delegation tokens from the NameNode redirect (no SPNEGO needed)
+7. The `kerberos` npm package (native addon) must be installable on the deployment platform
 
 ### Test HDFS cluster
 

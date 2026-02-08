@@ -43,6 +43,19 @@ if (existsSync(clientDistPath)) {
   });
 }
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+async function start() {
+  if (process.env.HDFS_AUTH === "kerberos") {
+    const { init } = await import("./services/kerberos.js");
+    await init();
+    console.log("Kerberos authentication enabled");
+  }
+
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+start().catch((err) => {
+  console.error("Failed to start server:", err);
+  process.exit(1);
 });
