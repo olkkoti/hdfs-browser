@@ -31,7 +31,7 @@ test.describe("File Operations", () => {
 
     // Navigate to /data to upload there (root upload may fail on some HDFS configs)
     await page.locator(".file-row", { hasText: "data" }).click();
-    await expect(page.locator(".file-row")).toHaveCount(6);
+    await expect(page.locator(".file-row")).toHaveCount(8);
 
     await page.click("text=Upload File");
     await expect(page.locator(".upload-modal")).toBeVisible();
