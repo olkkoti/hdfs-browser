@@ -16,6 +16,15 @@ export default defineConfig({
     {
       name: "chromium",
       use: { browserName: "chromium" },
+      testIgnore: /ldap/,
+    },
+    {
+      name: "ldap",
+      use: {
+        browserName: "chromium",
+        baseURL: process.env.LDAP_BASE_URL || "http://localhost:3002",
+      },
+      testMatch: /ldap/,
     },
   ],
 });

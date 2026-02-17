@@ -12,7 +12,7 @@ trap cleanup EXIT
 $COMPOSE build
 
 # Start infrastructure + app (background, wait for healthy)
-$COMPOSE up -d namenode datanode hdfs-app
+$COMPOSE up -d namenode datanode ldap hdfs-app hdfs-app-ldap
 
 # Run seed (foreground, blocks until done)
 $COMPOSE up seed

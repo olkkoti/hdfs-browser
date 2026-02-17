@@ -45,6 +45,46 @@ services:
       retries: 20
       start_period: 10s
 
+  ldap:
+    image: osixia/openldap:1.5.0
+    environment:
+      LDAP_ORGANISATION: Example
+      LDAP_DOMAIN: example.com
+      LDAP_ADMIN_PASSWORD: adminpassword
+      LDAP_SEED_INTERNAL_LDIF_PATH: /ldif
+    volumes:
+      - ./scripts/ldap-seed.ldif:/ldif/seed.ldif:ro
+    healthcheck:
+      test: ["CMD-SHELL", "ldapwhoami -x -H ldap://localhost:389 -D cn=admin,dc=example,dc=com -w adminpassword"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  hdfs-app-ldap:
+    build:
+      context: .
+      dockerfile: Dockerfile.e2e
+    environment:
+      HDFS_NAMENODE_HOST: namenode
+      HDFS_NAMENODE_PORT: "9870"
+      HDFS_USER: hadoop
+      PORT: "3001"
+      AUTH_MODE: ldap
+      LDAP_URL: ldap://ldap:389
+      LDAP_USER_DN_PATTERN: "cn=%s,ou=users,dc=example,dc=com"
+    depends_on:
+      datanode:
+        condition: service_started
+      ldap:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3001/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
   seed:
     image: curlimages/curl:latest
     depends_on:
@@ -59,6 +99,7 @@ services:
     working_dir: /work
     environment:
       BASE_URL: http://hdfs-app:3001
+      LDAP_BASE_URL: http://hdfs-app-ldap:3001
     volumes:
       - .:/work
       - ./test-results:/work/test-results
@@ -67,3 +108,5 @@ services:
     depends_on:
       seed:
         condition: service_completed_successfully
+      hdfs-app-ldap:
+        condition: service_healthy

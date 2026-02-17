@@ -37,6 +37,11 @@ Copy `.env.example` to `.env` and configure:
 - `HDFS_NAMENODE_PORT` — WebHDFS port (default: 9870)
 - `HDFS_USER` — HDFS user (default: hdfs)
 - `PORT` — Express server port (default: 3001)
+- `AUTH_MODE` — user authentication: `local` or `ldap` (default: local)
+- `LDAP_URL` — LDAP server URL, e.g. `ldaps://ipa.example.com` (required when `AUTH_MODE=ldap`)
+- `LDAP_USER_DN_PATTERN` — DN template with `%s` for username, e.g. `uid=%s,cn=users,cn=accounts,dc=example,dc=com`
+- `LDAP_STARTTLS` — use STARTTLS on `ldap://` connections (default: false)
+- `LDAP_CA_CERT` — path to CA certificate for TLS verification
 - `HDFS_AUTH` — authentication mode: `simple` or `kerberos` (default: simple)
 - `HDFS_PROTOCOL` — `http` or `https` (default: http)
 - `KRB5_PRINCIPAL` — Kerberos service principal (e.g. `hdfs-browser/host@REALM`)
@@ -53,6 +58,17 @@ To connect to a Kerberos-secured HDFS cluster:
 5. User impersonation is done via the `doas` query parameter (instead of `user.name` in simple mode)
 6. DataNode requests use delegation tokens from the NameNode redirect (no SPNEGO needed)
 7. The `kerberos` npm package (native addon) must be installable on the deployment platform
+
+### LDAP authentication (FreeIPA)
+
+To authenticate users against a FreeIPA (or other LDAP) server instead of the local `users.json` file:
+
+1. Set `AUTH_MODE=ldap`
+2. Set `LDAP_URL` to the LDAP server (e.g. `ldaps://ipa.example.com`)
+3. Set `LDAP_USER_DN_PATTERN` with `%s` as the username placeholder (e.g. `uid=%s,cn=users,cn=accounts,dc=example,dc=com`)
+4. Optionally set `LDAP_STARTTLS=true` for STARTTLS on plain `ldap://` connections
+5. Optionally set `LDAP_CA_CERT` to a CA certificate path for TLS verification
+6. Authentication uses bind-only (no LDAP search), so no service account is needed
 
 ### Test HDFS cluster
 
