@@ -8,13 +8,21 @@ const DEFAULT_HDFS_USER = process.env.HDFS_USER || "hdfs";
 const HDFS_AUTH = process.env.HDFS_AUTH || "simple";
 const HDFS_PROTOCOL = process.env.HDFS_PROTOCOL || "http";
 
-function isKerberos(): boolean {
-  return HDFS_AUTH === "kerberos";
+const useKerberos = HDFS_AUTH === "kerberos";
+
+// Cached reference to getSPNEGOToken, loaded once via initKerberos()
+let getSPNEGOToken: ((host: string) => Promise<string>) | null = null;
+
+export async function initKerberos(): Promise<void> {
+  if (!useKerberos) return;
+  const kerberos = await import("./kerberos.js");
+  await kerberos.init();
+  getSPNEGOToken = kerberos.getSPNEGOToken;
 }
 
 function webhdfsUrl(path: string, op: string, user?: string, extra?: Record<string, string>): string {
   const params = new URLSearchParams({ op, ...extra });
-  if (isKerberos()) {
+  if (useKerberos) {
     params.set("doas", user || DEFAULT_HDFS_USER);
   } else {
     params.set("user.name", user || DEFAULT_HDFS_USER);
@@ -23,8 +31,7 @@ function webhdfsUrl(path: string, op: string, user?: string, extra?: Record<stri
 }
 
 async function hdfsHeaders(): Promise<Record<string, string>> {
-  if (!isKerberos()) return {};
-  const { getSPNEGOToken } = await import("./kerberos.js");
+  if (!getSPNEGOToken) return {};
   const token = await getSPNEGOToken(NAMENODE_HOST);
   return { Authorization: `Negotiate ${token}` };
 }

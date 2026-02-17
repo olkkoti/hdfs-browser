@@ -44,11 +44,8 @@ if (existsSync(clientDistPath)) {
 }
 
 async function start() {
-  if (process.env.HDFS_AUTH === "kerberos") {
-    const { init } = await import("./services/kerberos.js");
-    await init();
-    console.log("Kerberos authentication enabled");
-  }
+  const { initKerberos } = await import("./services/hdfs.js");
+  await initKerberos();
 
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
