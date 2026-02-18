@@ -35,6 +35,10 @@ services:
       HDFS_NAMENODE_PORT: "9870"
       HDFS_USER: hadoop
       PORT: "3001"
+      SESSION_SECRET: e2e-test-secret
+      LOCAL_USERS_FILE: /app/e2e-users.json
+    volumes:
+      - ./e2e/users.json:/app/e2e-users.json:ro
     depends_on:
       datanode:
         condition: service_started
@@ -70,6 +74,7 @@ services:
       HDFS_NAMENODE_PORT: "9870"
       HDFS_USER: hadoop
       PORT: "3001"
+      SESSION_SECRET: e2e-test-secret
       AUTH_MODE: ldap
       LDAP_URL: ldap://ldap:389
       LDAP_USER_DN_PATTERN: "cn=%s,ou=users,dc=example,dc=com"

@@ -11,12 +11,14 @@ import { requireAuth } from "./middleware/auth.js";
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({ origin: true, credentials: true }));
+app.use(
+  cors({ origin: process.env.CORS_ORIGIN || true, credentials: true })
+);
 app.use(express.json());
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "hdfs-browser-dev-secret",
+    secret: process.env.SESSION_SECRET ?? (() => { throw new Error("SESSION_SECRET environment variable is required"); })(),
     resave: false,
     saveUninitialized: false,
     cookie: {

@@ -37,6 +37,9 @@ Copy `.env.example` to `.env` and configure:
 - `HDFS_NAMENODE_PORT` — WebHDFS port (default: 9870)
 - `HDFS_USER` — HDFS user (default: hdfs)
 - `PORT` — Express server port (default: 3001)
+- `SESSION_SECRET` — session signing secret (**required**, no default)
+- `CORS_ORIGIN` — allowed CORS origin (default: allow all; set to a specific origin in production)
+- `LOCAL_USERS_FILE` — path to users JSON file (required when `AUTH_MODE=local`)
 - `AUTH_MODE` — user authentication: `local` or `ldap` (default: local)
 - `LDAP_URL` — LDAP server URL, e.g. `ldaps://ipa.example.com` (required when `AUTH_MODE=ldap`)
 - `LDAP_USER_DN_PATTERN` — DN template with `%s` for username, e.g. `uid=%s,cn=users,cn=accounts,dc=example,dc=com`

@@ -1,5 +1,4 @@
 import { readFileSync } from "fs";
-import { join } from "path";
 
 export interface AuthProvider {
   authenticate(username: string, password: string): Promise<boolean>;
@@ -14,9 +13,14 @@ class LocalAuthProvider implements AuthProvider {
   private users: UserEntry[];
 
   constructor() {
-    const file = JSON.parse(
-      readFileSync(join(import.meta.dirname, "../../users.json"), "utf-8")
-    ) as { users: UserEntry[] };
+    const usersPath = process.env.LOCAL_USERS_FILE;
+    if (!usersPath)
+      throw new Error(
+        "LOCAL_USERS_FILE environment variable is required when AUTH_MODE=local"
+      );
+    const file = JSON.parse(readFileSync(usersPath, "utf-8")) as {
+      users: UserEntry[];
+    };
     this.users = file.users;
   }
 
