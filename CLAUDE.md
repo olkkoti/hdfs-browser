@@ -45,6 +45,7 @@ Copy `.env.example` to `.env` and configure:
 - `LDAP_USER_DN_PATTERN` — DN template with `%s` for username, e.g. `uid=%s,cn=users,cn=accounts,dc=example,dc=com`
 - `LDAP_STARTTLS` — use STARTTLS on `ldap://` connections (default: false)
 - `LDAP_CA_CERT` — path to CA certificate for TLS verification
+- `MAX_UPLOAD_SIZE` — maximum upload file size in bytes (default: 1073741824 = 1GB)
 - `HDFS_AUTH` — authentication mode: `simple` or `kerberos` (default: simple)
 - `HDFS_PROTOCOL` — `http` or `https` (default: http)
 - `KRB5_PRINCIPAL` — Kerberos service principal (e.g. `hdfs-browser/host@REALM`)

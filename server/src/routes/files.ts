@@ -1,13 +1,63 @@
-import { Router, type Request, type Response } from "express";
-import multer from "multer";
+import { Router, type Request, type Response, type NextFunction } from "express";
+import multer, { MulterError } from "multer";
+import { posix } from "path";
+import { Readable } from "stream";
+import { pipeline } from "stream/promises";
 import * as hdfs from "../services/hdfs.js";
 import "../middleware/auth.js";
 
-const upload = multer({ storage: multer.memoryStorage() });
+const MAX_UPLOAD_SIZE = parseInt(process.env.MAX_UPLOAD_SIZE || "1073741824", 10);
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_UPLOAD_SIZE } });
 const router = Router();
 
 function getUser(req: Request): string {
   return req.session.user!.username;
+}
+
+function validatePath(path: string): string | null {
+  if (path.includes("\0") || !path.startsWith("/")) return null;
+  const normalized = posix.normalize(path);
+  if (!normalized.startsWith("/")) return null;
+  return normalized;
+}
+
+// Validate and normalize all path-like query params before routes run
+const PATH_PARAMS = ["path", "from", "to"] as const;
+router.use((req: Request, res: Response, next: NextFunction) => {
+  for (const key of PATH_PARAMS) {
+    const value = req.query[key];
+    if (typeof value !== "string") continue;
+    const normalized = validatePath(value);
+    if (!normalized) {
+      res.status(400).json({ error: "Invalid path" });
+      return;
+    }
+    req.query[key] = normalized;
+  }
+  next();
+});
+
+function hdfsErrorStatus(err: unknown): number {
+  const message = err instanceof Error ? err.message : "";
+  if (message.includes("403") || message.includes("AccessControlException")) return 403;
+  if (message.includes("404") || message.includes("FileNotFoundException") || message.includes("does not exist")) return 404;
+  return 500;
+}
+
+function handleHdfsError(err: unknown, res: Response, operation: string): void {
+  console.error(`${operation} failed:`, err);
+  res.status(hdfsErrorStatus(err)).json({ error: `Failed to ${operation}` });
+}
+
+function safeContentDisposition(filename: string): string {
+  const ascii = filename.replace(/[^\x20-\x7E]/g, "_");
+  const encoded = encodeURIComponent(filename);
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encoded}`;
+}
+
+function sanitizeFilename(raw: string): string {
+  const lastSlash = Math.max(raw.lastIndexOf("/"), raw.lastIndexOf("\\"));
+  return lastSlash >= 0 ? raw.substring(lastSlash + 1) : raw;
 }
 
 router.get("/list", async (req: Request, res: Response) => {
@@ -16,8 +66,7 @@ router.get("/list", async (req: Request, res: Response) => {
     const data = await hdfs.listDirectory(path, getUser(req));
     res.json(data);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
+    handleHdfsError(err, res, "list directory");
   }
 });
 
@@ -27,18 +76,14 @@ router.get("/status", async (req: Request, res: Response) => {
     const data = await hdfs.getFileStatus(path, getUser(req));
     res.json(data);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
+    handleHdfsError(err, res, "get file status");
   }
 });
 
 router.get("/content", async (req: Request, res: Response) => {
   try {
     const path = req.query.path as string;
-    if (!path) {
-      res.status(400).json({ error: "path is required" });
-      return;
-    }
+    if (!path) { res.status(400).json({ error: "path is required" }); return; }
     const offset = Math.max(0, parseInt(req.query.offset as string) || 0);
     const length = Math.min(1048576, Math.max(1, parseInt(req.query.length as string) || 65536));
     const status = await hdfs.getFileStatus(path, getUser(req));
@@ -55,87 +100,84 @@ router.get("/content", async (req: Request, res: Response) => {
       hasMore: offset + actualLength < totalSize,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
+    handleHdfsError(err, res, "read file content");
   }
 });
 
 router.get("/download", async (req: Request, res: Response) => {
   try {
     const path = req.query.path as string;
-    if (!path) {
-      res.status(400).json({ error: "path is required" });
-      return;
-    }
+    if (!path) { res.status(400).json({ error: "path is required" }); return; }
     const hdfsRes = await hdfs.downloadFile(path, getUser(req));
     const filename = path.split("/").pop() || "download";
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Disposition", safeContentDisposition(filename));
     res.setHeader("Content-Type", "application/octet-stream");
 
     if (hdfsRes.body) {
-      const reader = hdfsRes.body.getReader();
-      const pump = async (): Promise<void> => {
-        const { done, value } = await reader.read();
-        if (done) {
-          res.end();
-          return;
-        }
-        res.write(value);
-        return pump();
-      };
-      await pump();
+      const nodeStream = Readable.fromWeb(hdfsRes.body as import("stream/web").ReadableStream);
+      await pipeline(nodeStream, res);
     } else {
       const buffer = await hdfsRes.arrayBuffer();
       res.send(Buffer.from(buffer));
     }
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
+    if (!res.headersSent) {
+      handleHdfsError(err, res, "download file");
+    }
   }
 });
 
-router.post("/upload", upload.single("file"), async (req: Request, res: Response) => {
-  try {
-    const path = (req.query.path as string) || "/";
-    if (!req.file) {
-      res.status(400).json({ error: "No file provided" });
-      return;
+router.post(
+  "/upload",
+  (req: Request, res: Response, next: NextFunction) => {
+    upload.single("file")(req, res, (err) => {
+      if (err instanceof MulterError && err.code === "LIMIT_FILE_SIZE") {
+        res.status(413).json({ error: `File exceeds maximum upload size of ${MAX_UPLOAD_SIZE} bytes` });
+        return;
+      }
+      if (err) { next(err); return; }
+      next();
+    });
+  },
+  async (req: Request, res: Response) => {
+    try {
+      const path = (req.query.path as string) || "/";
+      if (!req.file) {
+        res.status(400).json({ error: "No file provided" });
+        return;
+      }
+      const filename = sanitizeFilename(req.file.originalname);
+      if (!filename) {
+        res.status(400).json({ error: "Invalid filename" });
+        return;
+      }
+      await hdfs.uploadFile(path, req.file.buffer, filename, getUser(req));
+      res.json({ success: true });
+    } catch (err: unknown) {
+      handleHdfsError(err, res, "upload file");
     }
-    await hdfs.uploadFile(path, req.file.buffer, req.file.originalname, getUser(req));
-    res.json({ success: true });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
   }
-});
+);
 
 router.put("/mkdir", async (req: Request, res: Response) => {
   try {
     const path = req.query.path as string;
-    if (!path) {
-      res.status(400).json({ error: "path is required" });
-      return;
-    }
+    if (!path) { res.status(400).json({ error: "path is required" }); return; }
     await hdfs.mkdirs(path, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
+    handleHdfsError(err, res, "create directory");
   }
 });
 
 router.delete("/", async (req: Request, res: Response) => {
   try {
     const path = req.query.path as string;
-    if (!path) {
-      res.status(400).json({ error: "path is required" });
-      return;
-    }
+    if (!path) { res.status(400).json({ error: "path is required" }); return; }
     await hdfs.deleteFile(path, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
+    handleHdfsError(err, res, "delete file");
   }
 });
 
@@ -151,8 +193,7 @@ router.put("/acl/modify", async (req: Request, res: Response) => {
     await hdfs.modifyAclEntries(path, aclspec, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
+    handleHdfsError(err, res, "modify ACL entries");
   }
 });
 
@@ -167,38 +208,29 @@ router.put("/acl/remove", async (req: Request, res: Response) => {
     await hdfs.removeAclEntries(path, aclspec, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
+    handleHdfsError(err, res, "remove ACL entries");
   }
 });
 
 router.delete("/acl/default", async (req: Request, res: Response) => {
   try {
     const path = req.query.path as string;
-    if (!path) {
-      res.status(400).json({ error: "path is required" });
-      return;
-    }
+    if (!path) { res.status(400).json({ error: "path is required" }); return; }
     await hdfs.removeDefaultAcl(path, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
+    handleHdfsError(err, res, "remove default ACL");
   }
 });
 
 router.get("/acl", async (req: Request, res: Response) => {
   try {
     const path = req.query.path as string;
-    if (!path) {
-      res.status(400).json({ error: "path is required" });
-      return;
-    }
+    if (!path) { res.status(400).json({ error: "path is required" }); return; }
     const data = await hdfs.getAclStatus(path, getUser(req));
     res.json(data);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
+    handleHdfsError(err, res, "get ACL status");
   }
 });
 
@@ -213,8 +245,7 @@ router.put("/permission", async (req: Request, res: Response) => {
     await hdfs.setPermission(path, permission, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
+    handleHdfsError(err, res, "set permission");
   }
 });
 
@@ -229,23 +260,18 @@ router.put("/acl", async (req: Request, res: Response) => {
     await hdfs.setAcl(path, aclspec, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
+    handleHdfsError(err, res, "set ACL");
   }
 });
 
 router.delete("/acl", async (req: Request, res: Response) => {
   try {
     const path = req.query.path as string;
-    if (!path) {
-      res.status(400).json({ error: "path is required" });
-      return;
-    }
+    if (!path) { res.status(400).json({ error: "path is required" }); return; }
     await hdfs.removeAcl(path, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
+    handleHdfsError(err, res, "remove ACL");
   }
 });
 
@@ -260,8 +286,7 @@ router.put("/rename", async (req: Request, res: Response) => {
     await hdfs.rename(from, to, getUser(req));
     res.json({ success: true });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: message });
+    handleHdfsError(err, res, "rename");
   }
 });
 

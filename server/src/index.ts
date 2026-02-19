@@ -1,7 +1,9 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import session from "express-session";
+import rateLimit from "express-rate-limit";
 import { existsSync } from "fs";
 import { join } from "path";
 import authRouter from "./routes/auth.js";
@@ -11,6 +13,7 @@ import { requireAuth } from "./middleware/auth.js";
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(
   cors({ origin: process.env.CORS_ORIGIN || true, credentials: true })
 );
@@ -24,11 +27,18 @@ app.use(
     cookie: {
       httpOnly: true,
       sameSite: "lax",
-      secure: false,
+      secure: process.env.NODE_ENV === "production",
     },
   })
 );
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api/auth/login", loginLimiter);
 app.use("/api/auth", authRouter);
 app.use("/api/files", requireAuth, filesRouter);
 

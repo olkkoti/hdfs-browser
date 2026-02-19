@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getFileStatus, getAclStatus, fetchFileContent, downloadFile, deleteFile } from "../api/hdfs";
@@ -52,15 +52,15 @@ export default function FileViewer() {
 
   const { data: contentData, isLoading: contentLoading, error: contentError } = useQuery({
     queryKey: ["fileContent", hdfsPath, offset],
-    queryFn: async () => {
-      const result = await fetchFileContent(hdfsPath, offset, PAGE_SIZE);
-      if (isBinary === null && result.data.length > 0) {
-        const bytes = base64ToBytes(result.data);
-        setIsBinary(isBinaryContent(bytes));
-      }
-      return result;
-    },
+    queryFn: () => fetchFileContent(hdfsPath, offset, PAGE_SIZE),
   });
+
+  useEffect(() => {
+    if (isBinary === null && contentData && contentData.data.length > 0) {
+      const bytes = base64ToBytes(contentData.data);
+      setIsBinary(isBinaryContent(bytes));
+    }
+  }, [contentData, isBinary]);
 
   const [jumpInput, setJumpInput] = useState("");
 
