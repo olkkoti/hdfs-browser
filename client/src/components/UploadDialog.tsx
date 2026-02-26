@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { uploadFile } from "../api/hdfs";
+import { useDialogAccessibility } from "../hooks/useDialogAccessibility";
 import "./UploadDialog.css";
 
 interface UploadDialogProps {
@@ -9,6 +10,7 @@ interface UploadDialogProps {
 }
 
 export default function UploadDialog({ currentPath, onClose, onUploaded }: UploadDialogProps) {
+  const dialogRef = useDialogAccessibility(onClose);
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export default function UploadDialog({ currentPath, onClose, onUploaded }: Uploa
 
   return (
     <div className="upload-overlay" onClick={onClose}>
-      <div className="upload-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="upload-modal" ref={dialogRef} role="dialog" aria-modal="true" aria-label="Upload File" tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <div className="upload-header">
           <span className="upload-title">Upload File</span>
           <button className="upload-close" onClick={onClose}>

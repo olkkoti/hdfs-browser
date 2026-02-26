@@ -18,6 +18,7 @@ import {
   octalToRwxString,
   isBaseEntry,
 } from "../utils/acl";
+import { useDialogAccessibility } from "../hooks/useDialogAccessibility";
 import "./PermissionsDialog.css";
 
 interface PermissionsDialogProps {
@@ -30,6 +31,7 @@ interface PermissionsDialogProps {
 type Tab = "permissions" | "acls";
 
 export default function PermissionsDialog({ path, isDirectory, onClose, onChanged }: PermissionsDialogProps) {
+  const dialogRef = useDialogAccessibility(onClose);
   const [tab, setTab] = useState<Tab>("permissions");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -271,7 +273,7 @@ export default function PermissionsDialog({ path, isDirectory, onClose, onChange
 
   return (
     <div className="perm-overlay" onClick={onClose}>
-      <div className="perm-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="perm-modal" ref={dialogRef} role="dialog" aria-modal="true" aria-label="Permissions" tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <div className="perm-header">
           <span className="perm-title">Permissions: {path}</span>
           <button className="perm-close" onClick={onClose}>✕</button>
