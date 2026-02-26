@@ -17,7 +17,7 @@ export default function BreadcrumbNav({ path, onNavigate }: BreadcrumbNavProps) 
         const segPath = "/" + segments.slice(0, i + 1).join("/");
         return (
           <span key={segPath}>
-            <span className="breadcrumb-separator">/</span>
+            {i > 0 && <span className="breadcrumb-separator">/</span>}
             <button className="breadcrumb-link" onClick={() => onNavigate(segPath)}>
               {seg}
             </button>
