@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { HdfsFileStatus } from "../types/hdfs";
 import FileRow from "./FileRow";
 import "./FileTable.css";
@@ -29,7 +29,7 @@ export default function FileTable({ files, currentPath, currentDirStatus, parent
     }
   }
 
-  const sorted = [...files].sort((a, b) => {
+  const sorted = useMemo(() => [...files].sort((a, b) => {
     // Directories first
     if (a.type !== b.type) return a.type === "DIRECTORY" ? -1 : 1;
 
@@ -52,7 +52,7 @@ export default function FileTable({ files, currentPath, currentDirStatus, parent
         break;
     }
     return sortDir === "asc" ? cmp : -cmp;
-  });
+  }), [files, sortKey, sortDir]);
 
   const dotEntry: HdfsFileStatus = currentDirStatus
     ? { ...currentDirStatus, pathSuffix: "." }
