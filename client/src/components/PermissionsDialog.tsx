@@ -43,12 +43,12 @@ export default function PermissionsDialog({ path, isDirectory, onClose, onChange
 
   // ACL tab state
   const [entries, setEntries] = useState<ParsedAclEntry[]>([]);
-  const [newType, setNewType] = useState<"user" | "group">("user");
-  const [newName, setNewName] = useState("");
-  const [newR, setNewR] = useState(true);
-  const [newW, setNewW] = useState(false);
-  const [newX, setNewX] = useState(false);
-  const [newScope, setNewScope] = useState<"access" | "default">("access");
+  interface NewEntryState { type: "user" | "group"; name: string; r: boolean; w: boolean; x: boolean }
+  const defaultNewEntry: NewEntryState = { type: "user", name: "", r: true, w: false, x: false };
+  const [newEntryByScope, setNewEntryByScope] = useState<Record<"access" | "default", NewEntryState>>({
+    access: { ...defaultNewEntry },
+    default: { ...defaultNewEntry },
+  });
   const [rawExpanded, setRawExpanded] = useState(false);
   const [rawSpec, setRawSpec] = useState("");
 
@@ -99,26 +99,28 @@ export default function PermissionsDialog({ path, isDirectory, onClose, onChange
   }
 
   // ACL tab handlers
-  async function handleAddEntry() {
-    if (!newName.trim() && (newType === "user" || newType === "group")) {
+  function updateNewEntry(scope: "access" | "default", updates: Partial<NewEntryState>) {
+    setNewEntryByScope((prev) => ({ ...prev, [scope]: { ...prev[scope], ...updates } }));
+  }
+
+  async function handleAddEntry(scope: "access" | "default") {
+    const ne = newEntryByScope[scope];
+    if (!ne.name.trim() && (ne.type === "user" || ne.type === "group")) {
       setError("Name is required for named user/group entries");
       return;
     }
-    const perm = (newR ? "r" : "-") + (newW ? "w" : "-") + (newX ? "x" : "-");
+    const perm = (ne.r ? "r" : "-") + (ne.w ? "w" : "-") + (ne.x ? "x" : "-");
     const entry: ParsedAclEntry = {
-      scope: newScope,
-      type: newType,
-      name: newName.trim(),
+      scope,
+      type: ne.type,
+      name: ne.name.trim(),
       permission: perm,
     };
     setSaving(true);
     setError(null);
     try {
       await modifyAclEntries(path, serializeAclEntry(entry));
-      setNewName("");
-      setNewR(true);
-      setNewW(false);
-      setNewX(false);
+      updateNewEntry(scope, { name: "", r: true, w: false, x: false });
       onChanged();
       await fetchData();
     } catch (err) {
@@ -233,35 +235,26 @@ export default function PermissionsDialog({ path, isDirectory, onClose, onChange
           <tr className="acl-add-row">
             <td>
               <select
-                value={scope === "default" ? `default-${newType}` : newType}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val.startsWith("default-")) {
-                    setNewScope("default");
-                    setNewType(val.replace("default-", "") as "user" | "group");
-                  } else {
-                    setNewScope(scope);
-                    setNewType(val as "user" | "group");
-                  }
-                }}
+                value={newEntryByScope[scope].type}
+                onChange={(e) => updateNewEntry(scope, { type: e.target.value as "user" | "group" })}
               >
-                <option value={scope === "default" ? "default-user" : "user"}>user</option>
-                <option value={scope === "default" ? "default-group" : "group"}>group</option>
+                <option value="user">user</option>
+                <option value="group">group</option>
               </select>
             </td>
             <td>
               <input
                 type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
+                value={newEntryByScope[scope].name}
+                onChange={(e) => updateNewEntry(scope, { name: e.target.value })}
                 placeholder="name"
               />
             </td>
-            <td><input type="checkbox" checked={newR} onChange={(e) => setNewR(e.target.checked)} /></td>
-            <td><input type="checkbox" checked={newW} onChange={(e) => setNewW(e.target.checked)} /></td>
-            <td><input type="checkbox" checked={newX} onChange={(e) => setNewX(e.target.checked)} /></td>
+            <td><input type="checkbox" checked={newEntryByScope[scope].r} onChange={(e) => updateNewEntry(scope, { r: e.target.checked })} /></td>
+            <td><input type="checkbox" checked={newEntryByScope[scope].w} onChange={(e) => updateNewEntry(scope, { w: e.target.checked })} /></td>
+            <td><input type="checkbox" checked={newEntryByScope[scope].x} onChange={(e) => updateNewEntry(scope, { x: e.target.checked })} /></td>
             <td>
-              <button className="acl-add-btn" onClick={handleAddEntry} disabled={saving}>
+              <button className="acl-add-btn" onClick={() => handleAddEntry(scope)} disabled={saving}>
                 + Add
               </button>
             </td>
