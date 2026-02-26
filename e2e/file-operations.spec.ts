@@ -81,6 +81,29 @@ test.describe("File Operations", () => {
     await expect(page.locator(".file-row", { hasText: folderName })).toHaveCount(0);
   });
 
+  test("refresh button reloads listing", async ({ page }) => {
+    const folderName = `refresh-test-${Date.now()}`;
+
+    // Create a temp folder
+    await page.evaluate((name) => {
+      window.prompt = () => name;
+    }, folderName);
+    await page.click("text=New Folder");
+    await expect(page.locator(".file-row", { hasText: folderName })).toBeVisible();
+
+    // Click Refresh and verify folder is still there
+    await page.click("text=Refresh");
+    await expect(page.locator(".file-row", { hasText: folderName })).toBeVisible();
+
+    // Clean up
+    await page.evaluate(() => {
+      window.confirm = () => true;
+    });
+    const row = page.locator(".file-row", { hasText: folderName });
+    await row.locator(".delete-btn").click();
+    await expect(page.locator(".file-row", { hasText: folderName })).toHaveCount(0);
+  });
+
   test("cancel upload dialog closes it", async ({ page }) => {
     await page.click("text=Upload File");
     await expect(page.locator(".upload-modal")).toBeVisible();
