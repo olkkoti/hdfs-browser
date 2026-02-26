@@ -3,6 +3,9 @@ import type { HdfsListResponse, HdfsStatusResponse, HdfsAclStatusResponse, FileC
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, credentials: "include" });
   if (!res.ok) {
+    if (res.status === 401) {
+      window.dispatchEvent(new Event("auth:expired"));
+    }
     const body = await res.json().catch(() => ({}));
     throw new Error((body as { error?: string }).error || `Request failed: ${res.status}`);
   }
