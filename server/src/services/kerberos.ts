@@ -49,6 +49,7 @@ export async function getSPNEGOToken(serviceFqdn: string): Promise<string> {
       mechOID: kerberosModule.GSS_MECH_OID_SPNEGO,
     });
     const token = await client.step("");
+    if (!token) throw new Error("SPNEGO step returned null token");
     return token;
   } catch (err: unknown) {
     // If token generation fails, try re-kinit and retry once
@@ -58,6 +59,7 @@ export async function getSPNEGOToken(serviceFqdn: string): Promise<string> {
       mechOID: kerberosModule.GSS_MECH_OID_SPNEGO,
     });
     const token = await client.step("");
+    if (!token) throw new Error("SPNEGO step returned null token after re-kinit");
     return token;
   }
 }
