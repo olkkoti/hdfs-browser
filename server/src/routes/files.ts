@@ -136,6 +136,12 @@ router.get("/download", async (req: Request, res: Response) => {
 
 router.post("/upload", async (req: Request, res: Response) => {
   try {
+    const contentLength = parseInt(req.headers["content-length"] || "", 10);
+    if (contentLength > MAX_UPLOAD_SIZE) {
+      res.status(413).json({ error: `File exceeds maximum upload size of ${MAX_UPLOAD_SIZE} bytes` });
+      return;
+    }
+
     const path = (req.query.path as string) || "/";
     const user = getUser(req);
 
