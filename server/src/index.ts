@@ -64,6 +64,14 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+// Global error handler — returns JSON instead of Express default HTML stack trace
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  logger.error({ err }, "unhandled error");
+  if (!res.headersSent) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Serve built client in production
 const clientDistPath = join(import.meta.dirname, "../../client/dist");
 if (existsSync(clientDistPath)) {
