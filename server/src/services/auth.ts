@@ -1,6 +1,28 @@
 import { readFileSync } from "fs";
 import { logger } from "../logger.js";
 
+/** Escape special characters in an LDAP DN attribute value per RFC 4514. */
+function escapeDnValue(value: string): string {
+  let escaped = value
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\+/g, "\\+")
+    .replace(/,/g, "\\,")
+    .replace(/;/g, "\\;")
+    .replace(/</g, "\\<")
+    .replace(/>/g, "\\>")
+    .replace(/\0/g, "\\00");
+
+  if (escaped.startsWith("#") || escaped.startsWith(" ")) {
+    escaped = "\\" + escaped;
+  }
+  if (escaped.endsWith(" ")) {
+    escaped = escaped.slice(0, -1) + "\\ ";
+  }
+
+  return escaped;
+}
+
 export interface AuthProvider {
   authenticate(username: string, password: string): Promise<boolean>;
 }
@@ -56,7 +78,7 @@ class LdapAuthProvider implements AuthProvider {
 
   async authenticate(username: string, password: string): Promise<boolean> {
     const { Client } = await import("ldapts");
-    const dn = this.userDnPattern.replace("%s", username);
+    const dn = this.userDnPattern.replace("%s", escapeDnValue(username));
 
     const tlsOptions: Record<string, unknown> = {};
     if (this.caCert) {
