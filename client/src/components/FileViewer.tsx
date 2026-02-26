@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getFileStatus, getAclStatus, fetchFileContent, downloadFile, deleteFile } from "../api/hdfs";
@@ -60,12 +60,16 @@ export default function FileViewer() {
     queryFn: () => fetchFileContent(hdfsPath, offset, PAGE_SIZE),
   });
 
+  const contentBytes = useMemo(
+    () => contentData ? base64ToBytes(contentData.data) : null,
+    [contentData]
+  );
+
   useEffect(() => {
-    if (isBinary === null && contentData && contentData.data.length > 0) {
-      const bytes = base64ToBytes(contentData.data);
-      setIsBinary(isBinaryContent(bytes));
+    if (isBinary === null && contentBytes && contentBytes.length > 0) {
+      setIsBinary(isBinaryContent(contentBytes));
     }
-  }, [contentData, isBinary]);
+  }, [contentBytes, isBinary]);
 
   const [jumpInput, setJumpInput] = useState("");
 
@@ -107,12 +111,10 @@ export default function FileViewer() {
   function renderContent() {
     if (contentLoading) return <div className="fv-loading">Loading...</div>;
     if (contentError) return <div className="fv-error">{contentError instanceof Error ? contentError.message : "Failed to load content"}</div>;
-    if (!contentData) return null;
-
-    const bytes = base64ToBytes(contentData.data);
+    if (!contentData || !contentBytes) return null;
 
     if (isBinary) {
-      const lines = hexDump(bytes, contentData.offset);
+      const lines = hexDump(contentBytes, contentData.offset);
       return (
         <div className="fv-hex-content">
           {lines.map((line, i) => (
@@ -129,7 +131,7 @@ export default function FileViewer() {
       );
     }
 
-    const text = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+    const text = new TextDecoder("utf-8", { fatal: false }).decode(contentBytes);
     const lines = text.split("\n");
     // Remove trailing empty line from split
     if (lines.length > 1 && lines[lines.length - 1] === "") {
