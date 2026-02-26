@@ -1,7 +1,7 @@
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { listDirectory, getFileStatus, mkdir, deleteFile as apiDeleteFile } from "./api/hdfs";
+import { listDirectory, getFileStatus, mkdir, deleteFile as apiDeleteFile, rename } from "./api/hdfs";
 import { useAuth } from "./auth/AuthContext";
 import BreadcrumbNav from "./components/BreadcrumbNav";
 import FileTable from "./components/FileTable";
@@ -61,6 +61,19 @@ function FileBrowser() {
     }
   }
 
+  async function handleRename(path: string, name: string) {
+    const newName = window.prompt("Enter new name:", name);
+    if (!newName || newName === name) return;
+    const parentDir = path.substring(0, path.lastIndexOf("/")) || "/";
+    const newPath = parentDir === "/" ? `/${newName}` : `${parentDir}/${newName}`;
+    try {
+      await rename(path, newPath);
+      handleRefresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to rename");
+    }
+  }
+
   async function handleDelete(path: string, name: string) {
     if (!window.confirm(`Delete "${name}"?`)) return;
     try {
@@ -103,6 +116,7 @@ function FileBrowser() {
             parentDirStatus={parentStatusData?.FileStatus}
             onNavigate={handleNavigate}
             onDelete={handleDelete}
+            onRename={handleRename}
             onPermissions={(path, isDirectory) => setPermissionsTarget({ path, isDirectory })}
           />
         )}

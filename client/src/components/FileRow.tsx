@@ -8,6 +8,7 @@ interface FileRowProps {
   currentPath: string;
   onNavigate: (path: string) => void;
   onDelete: (path: string, name: string) => void;
+  onRename: (path: string, name: string) => void;
   onPermissions: (path: string, isDirectory: boolean) => void;
   isDotEntry?: boolean;
 }
@@ -28,7 +29,7 @@ function formatPermission(perm: string): string {
   return perm.padStart(3, "0");
 }
 
-export default function FileRow({ file, currentPath, onNavigate, onDelete, onPermissions, isDotEntry }: FileRowProps) {
+export default function FileRow({ file, currentPath, onNavigate, onDelete, onRename, onPermissions, isDotEntry }: FileRowProps) {
   const routerNavigate = useNavigate();
   const isDir = file.type === "DIRECTORY";
   const fullPath = currentPath === "/" ? `/${file.pathSuffix}` : `${currentPath}/${file.pathSuffix}`;
@@ -54,6 +55,11 @@ export default function FileRow({ file, currentPath, onNavigate, onDelete, onPer
   function handleDownload(e: React.MouseEvent) {
     e.stopPropagation();
     downloadFile(fullPath);
+  }
+
+  function handleRename(e: React.MouseEvent) {
+    e.stopPropagation();
+    onRename(fullPath, file.pathSuffix);
   }
 
   function handleDelete(e: React.MouseEvent) {
@@ -92,6 +98,11 @@ export default function FileRow({ file, currentPath, onNavigate, onDelete, onPer
         <button className="action-btn" onClick={handlePermissions} title="Permissions">
           🔒
         </button>
+        {!isDotEntry && (
+          <button className="action-btn rename-btn" onClick={handleRename} title="Rename">
+            ✎
+          </button>
+        )}
         {!isDotEntry && (
           <button className="action-btn delete-btn" onClick={handleDelete} title="Delete">
             ✕

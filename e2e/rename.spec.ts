@@ -1,53 +1,53 @@
 import { test, expect } from "@playwright/test";
 import { login } from "./fixtures";
 
-test.describe("Rename API", () => {
+test.describe("Rename", () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
   });
 
-  test("renames a file", async ({ page }) => {
+  test("renames a file via UI", async ({ page }) => {
     const suffix = Date.now();
-    const original = `/data/rename-orig-${suffix}.txt`;
-    const renamed = `/data/rename-new-${suffix}.txt`;
+    const originalName = `rename-orig-${suffix}.txt`;
+    const newName = `rename-new-${suffix}.txt`;
 
     // Create a temp file via API
-    await page.request.post(`/api/files/upload?path=${encodeURIComponent(original)}`, {
+    await page.request.post(`/api/files/upload?path=${encodeURIComponent(`/data/${originalName}`)}`, {
       multipart: {
         file: { name: "test.txt", mimeType: "text/plain", buffer: Buffer.from("rename test") },
       },
     });
 
-    // Rename via API
-    const res = await page.request.put(
-      `/api/files/rename?from=${encodeURIComponent(original)}&to=${encodeURIComponent(renamed)}`
-    );
-    expect(res.ok()).toBe(true);
+    // Navigate to /data
+    await page.locator(".file-row", { hasText: "data" }).click();
+    await expect(page.locator(".file-row", { hasText: originalName })).toBeVisible();
 
-    // Verify new name exists and old name is gone in the listing
-    const listRes = await page.request.get(`/api/files/list?path=${encodeURIComponent("/data")}`);
-    const listing = await listRes.json();
-    const names = listing.FileStatuses.FileStatus.map(
-      (f: { pathSuffix: string }) => f.pathSuffix
-    );
-    expect(names).toContain(`rename-new-${suffix}.txt`);
-    expect(names).not.toContain(`rename-orig-${suffix}.txt`);
+    // Stub window.prompt to return the new name
+    await page.evaluate((name) => {
+      window.prompt = () => name;
+    }, newName);
+
+    // Click the rename button on the file row
+    const row = page.locator(".file-row", { hasText: originalName });
+    await row.locator(".rename-btn").click();
+
+    // Verify old name gone and new name visible
+    await expect(page.locator(".file-row", { hasText: newName })).toBeVisible();
+    await expect(page.locator(".file-row", { hasText: originalName })).toHaveCount(0);
 
     // Clean up
-    await page.request.delete(`/api/files?path=${encodeURIComponent(renamed)}`);
+    await page.request.delete(`/api/files?path=${encodeURIComponent(`/data/${newName}`)}`);
   });
 
-  test("renames a directory and preserves contents", async ({ page }) => {
+  test("renames a directory via UI and preserves contents", async ({ page }) => {
     const suffix = Date.now();
-    const original = `/data/rename-dir-orig-${suffix}`;
-    const renamed = `/data/rename-dir-new-${suffix}`;
+    const originalName = `rename-dir-orig-${suffix}`;
+    const newName = `rename-dir-new-${suffix}`;
 
-    // Create a temp directory
-    await page.request.put(`/api/files/mkdir?path=${encodeURIComponent(original)}`);
-
-    // Create a file inside it
+    // Create a temp directory with a child file
+    await page.request.put(`/api/files/mkdir?path=${encodeURIComponent(`/data/${originalName}`)}`);
     await page.request.post(
-      `/api/files/upload?path=${encodeURIComponent(original + "/child.txt")}`,
+      `/api/files/upload?path=${encodeURIComponent(`/data/${originalName}/child.txt`)}`,
       {
         multipart: {
           file: { name: "child.txt", mimeType: "text/plain", buffer: Buffer.from("child content") },
@@ -55,15 +55,26 @@ test.describe("Rename API", () => {
       }
     );
 
-    // Rename the directory
-    const res = await page.request.put(
-      `/api/files/rename?from=${encodeURIComponent(original)}&to=${encodeURIComponent(renamed)}`
-    );
-    expect(res.ok()).toBe(true);
+    // Navigate to /data
+    await page.locator(".file-row", { hasText: "data" }).click();
+    await expect(page.locator(".file-row", { hasText: originalName })).toBeVisible();
 
-    // Verify the renamed directory has the child file
+    // Stub window.prompt to return the new name
+    await page.evaluate((name) => {
+      window.prompt = () => name;
+    }, newName);
+
+    // Click the rename button on the directory row
+    const row = page.locator(".file-row", { hasText: originalName });
+    await row.locator(".rename-btn").click();
+
+    // Verify old name gone and new name visible
+    await expect(page.locator(".file-row", { hasText: newName })).toBeVisible();
+    await expect(page.locator(".file-row", { hasText: originalName })).toHaveCount(0);
+
+    // Verify contents preserved via API
     const listRes = await page.request.get(
-      `/api/files/list?path=${encodeURIComponent(renamed)}`
+      `/api/files/list?path=${encodeURIComponent(`/data/${newName}`)}`
     );
     const listing = await listRes.json();
     const names = listing.FileStatuses.FileStatus.map(
@@ -71,22 +82,11 @@ test.describe("Rename API", () => {
     );
     expect(names).toContain("child.txt");
 
-    // Verify old directory is gone
-    const parentRes = await page.request.get(
-      `/api/files/list?path=${encodeURIComponent("/data")}`
-    );
-    const parentListing = await parentRes.json();
-    const parentNames = parentListing.FileStatuses.FileStatus.map(
-      (f: { pathSuffix: string }) => f.pathSuffix
-    );
-    expect(parentNames).not.toContain(`rename-dir-orig-${suffix}`);
-
     // Clean up
-    await page.request.delete(`/api/files?path=${encodeURIComponent(renamed)}`);
+    await page.request.delete(`/api/files?path=${encodeURIComponent(`/data/${newName}`)}`);
   });
 
   test("rename missing parameters returns 400", async ({ page }) => {
-    // Call rename without 'from' and 'to' params
     const res = await page.request.put("/api/files/rename");
     expect(res.ok()).toBe(false);
     expect(res.status()).toBe(400);

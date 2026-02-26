@@ -13,10 +13,11 @@ interface FileTableProps {
   parentDirStatus?: HdfsFileStatus;
   onNavigate: (path: string) => void;
   onDelete: (path: string, name: string) => void;
+  onRename: (path: string, name: string) => void;
   onPermissions: (path: string, isDirectory: boolean) => void;
 }
 
-export default function FileTable({ files, currentPath, currentDirStatus, parentDirStatus, onNavigate, onDelete, onPermissions }: FileTableProps) {
+export default function FileTable({ files, currentPath, currentDirStatus, parentDirStatus, onNavigate, onDelete, onRename, onPermissions }: FileTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -121,6 +122,7 @@ export default function FileTable({ files, currentPath, currentDirStatus, parent
               currentPath={currentPath}
               onNavigate={onNavigate}
               onDelete={onDelete}
+              onRename={onRename}
               onPermissions={onPermissions}
               isDotEntry
             />
@@ -132,6 +134,7 @@ export default function FileTable({ files, currentPath, currentDirStatus, parent
               currentPath={currentPath}
               onNavigate={onNavigate}
               onDelete={onDelete}
+              onRename={onRename}
               onPermissions={onPermissions}
             />
           ))}
