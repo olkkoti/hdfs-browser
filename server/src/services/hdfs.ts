@@ -1,5 +1,7 @@
 import http from "http";
 import https from "https";
+import { posix } from "path";
+import type { Readable } from "stream";
 import type { HdfsListResponse, HdfsStatusResponse, HdfsAclStatusResponse } from "../types.js";
 
 const NAMENODE_HOST = process.env.HDFS_NAMENODE_HOST || "localhost";
@@ -69,9 +71,9 @@ export async function readFileChunk(path: string, offset: number, length: number
   return Buffer.from(await res.arrayBuffer());
 }
 
-export async function uploadFile(path: string, data: Uint8Array, filename: string, user?: string): Promise<void> {
+export async function uploadFile(path: string, data: Readable, filename: string, user?: string): Promise<void> {
   // Step 1: Create request to NameNode (returns redirect URL)
-  const createRes = await fetch(webhdfsUrl(path + "/" + filename, "CREATE", user, { overwrite: "true" }), {
+  const createRes = await fetch(webhdfsUrl(posix.join(path, filename), "CREATE", user, { overwrite: "true" }), {
     method: "PUT",
     redirect: "manual",
     headers: await hdfsHeaders(),
@@ -85,7 +87,7 @@ export async function uploadFile(path: string, data: Uint8Array, filename: strin
     throw new Error(`HDFS CREATE did not return redirect location: ${createRes.status}`);
   }
 
-  // Step 2: Send data to datanode using http/https.request
+  // Step 2: Stream data to datanode using http/https.request
   // (Node.js native fetch/undici rejects the datanode's non-compliant HTTP response)
   // DataNode redirect URL includes a delegation token, so no SPNEGO needed here
   const status = await new Promise<number>((resolve, reject) => {
@@ -96,13 +98,14 @@ export async function uploadFile(path: string, data: Uint8Array, filename: strin
       port: parsed.port,
       path: parsed.pathname + parsed.search,
       method: "PUT",
-      headers: { "Content-Type": "application/octet-stream", "Content-Length": data.length },
+      headers: { "Content-Type": "application/octet-stream" },
     }, (res) => {
       res.resume();
       resolve(res.statusCode ?? 0);
     });
     req.on("error", reject);
-    req.end(data);
+    data.on("error", (err) => { req.destroy(); reject(err); });
+    data.pipe(req);
   });
 
   if (status !== 200 && status !== 201) {

@@ -1,5 +1,5 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
-import multer, { MulterError } from "multer";
+import Busboy from "busboy";
 import { posix } from "path";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
@@ -7,8 +7,7 @@ import * as hdfs from "../services/hdfs.js";
 import { logger, auditLog } from "../logger.js";
 import "../middleware/auth.js";
 
-const MAX_UPLOAD_SIZE = parseInt(process.env.MAX_UPLOAD_SIZE || "1073741824", 10);
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_UPLOAD_SIZE } });
+const MAX_UPLOAD_SIZE = parseInt(process.env.MAX_UPLOAD_SIZE || "10737418240", 10);
 const router = Router();
 
 function getUser(req: Request): string {
@@ -135,39 +134,57 @@ router.get("/download", async (req: Request, res: Response) => {
   }
 });
 
-router.post(
-  "/upload",
-  (req: Request, res: Response, next: NextFunction) => {
-    upload.single("file")(req, res, (err) => {
-      if (err instanceof MulterError && err.code === "LIMIT_FILE_SIZE") {
-        res.status(413).json({ error: `File exceeds maximum upload size of ${MAX_UPLOAD_SIZE} bytes` });
-        return;
-      }
-      if (err) { next(err); return; }
-      next();
+router.post("/upload", async (req: Request, res: Response) => {
+  try {
+    const path = (req.query.path as string) || "/";
+    const user = getUser(req);
+
+    const { filename, fileStream } = await new Promise<{ filename: string; fileStream: Readable }>((resolve, reject) => {
+      let resolved = false;
+      const busboy = Busboy({
+        headers: req.headers,
+        limits: { fileSize: MAX_UPLOAD_SIZE, files: 1 },
+      });
+
+      busboy.on("file", (fieldname, stream, info) => {
+        if (fieldname !== "file" || resolved) {
+          stream.resume();
+          return;
+        }
+        resolved = true;
+        const fname = sanitizeFilename(info.filename);
+        if (!fname) {
+          stream.destroy();
+          reject(new Error("Invalid filename"));
+          return;
+        }
+        stream.on("limit", () => {
+          stream.destroy(new Error(`File exceeds maximum upload size of ${MAX_UPLOAD_SIZE} bytes`));
+        });
+        resolve({ filename: fname, fileStream: stream });
+      });
+
+      busboy.on("error", reject);
+      busboy.on("close", () => { if (!resolved) reject(new Error("No file provided")); });
+
+      req.pipe(busboy);
     });
-  },
-  async (req: Request, res: Response) => {
-    try {
-      const path = (req.query.path as string) || "/";
-      if (!req.file) {
-        res.status(400).json({ error: "No file provided" });
-        return;
-      }
-      const filename = sanitizeFilename(req.file.originalname);
-      if (!filename) {
-        res.status(400).json({ error: "Invalid filename" });
-        return;
-      }
-      const user = getUser(req);
-      await hdfs.uploadFile(path, req.file.buffer, filename, user);
-      auditLog({ user, path, filename }, "file_upload");
-      res.json({ success: true });
-    } catch (err: unknown) {
-      handleHdfsError(err, res, "upload file");
+
+    await hdfs.uploadFile(path, fileStream, filename, user);
+    auditLog({ user, path, filename }, "file_upload");
+    res.json({ success: true });
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes("maximum upload size")) {
+      res.status(413).json({ error: err.message });
+      return;
     }
+    if (err instanceof Error && (err.message === "No file provided" || err.message === "Invalid filename")) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    handleHdfsError(err, res, "upload file");
   }
-);
+});
 
 router.put("/mkdir", async (req: Request, res: Response) => {
   try {

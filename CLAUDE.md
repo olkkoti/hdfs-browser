@@ -46,7 +46,7 @@ Copy `.env.example` to `.env` and configure:
 - `LDAP_STARTTLS` — use STARTTLS on `ldap://` connections (default: false)
 - `LDAP_CA_CERT` — path to CA certificate for TLS verification
 - `LOG_LEVEL` — log verbosity: `fatal`, `error`, `warn`, `info`, `debug`, `trace` (default: info)
-- `MAX_UPLOAD_SIZE` — maximum upload file size in bytes (default: 1073741824 = 1GB)
+- `MAX_UPLOAD_SIZE` — maximum upload file size in bytes (default: 10737418240 = 10GB)
 - `HDFS_AUTH` — authentication mode: `simple` or `kerberos` (default: simple)
 - `HDFS_PROTOCOL` — `http` or `https` (default: http)
 - `KRB5_PRINCIPAL` — Kerberos service principal (e.g. `hdfs-browser/host@REALM`)
