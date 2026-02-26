@@ -21,6 +21,11 @@ export function parseAclEntry(entry: string): ParsedAclEntry {
     permission = parts[2];
   }
 
+  const validTypes: ParsedAclEntry["type"][] = ["user", "group", "mask", "other"];
+  if (!validTypes.includes(type as ParsedAclEntry["type"])) {
+    throw new Error(`Unknown ACL entry type: ${type}`);
+  }
+
   return {
     scope,
     type: type as ParsedAclEntry["type"],
