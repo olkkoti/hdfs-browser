@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.git/
+.env
+.env.*
+*.log
+.DS_Store
+.idea/
+.claude/
+*.keytab
+krb5.conf
+test-results/
+playwright-report/
+CODE_REVIEW.md
