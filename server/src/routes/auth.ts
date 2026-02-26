@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { getAuthProvider } from "../services/auth.js";
+import { audit, auditLog } from "../logger.js";
 import "../middleware/auth.js";
 
 const router = Router();
@@ -14,24 +15,29 @@ router.post("/login", async (req: Request, res: Response) => {
   try {
     const ok = await getAuthProvider().authenticate(username, password);
     if (!ok) {
+      audit.warn({ user: username, ip: req.ip }, "[AUDIT] user_login_failed");
       res.status(401).json({ error: "Invalid username or password" });
       return;
     }
 
     req.session.user = { username };
+    auditLog({ user: username, ip: req.ip }, "user_login");
     res.json({ username });
   } catch {
+    audit.warn({ user: username, ip: req.ip, reason: "service_error" }, "[AUDIT] user_login_failed");
     res.status(500).json({ error: "Authentication service error" });
   }
 });
 
 router.post("/logout", (req: Request, res: Response) => {
+  const user = req.session.user?.username;
   req.session.destroy((err) => {
     if (err) {
       res.status(500).json({ error: "Failed to logout" });
       return;
     }
     res.clearCookie("connect.sid");
+    auditLog({ user }, "user_logout");
     res.json({ success: true });
   });
 });

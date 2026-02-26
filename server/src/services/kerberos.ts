@@ -1,5 +1,6 @@
 import { execFile } from "child_process";
 import { promisify } from "util";
+import { logger } from "../logger.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -23,16 +24,16 @@ export async function init(): Promise<void> {
   kerberosModule = await import("kerberos");
 
   await kinit();
-  console.log(`Kerberos: kinit succeeded for ${KRB5_PRINCIPAL}`);
+  logger.info({ principal: KRB5_PRINCIPAL }, "kerberos kinit succeeded");
   initialized = true;
 
   // Periodically refresh the TGT
   reinitTimer = setInterval(async () => {
     try {
       await kinit();
-      console.log(`Kerberos: TGT refreshed for ${KRB5_PRINCIPAL}`);
+      logger.info({ principal: KRB5_PRINCIPAL }, "kerberos TGT refreshed");
     } catch (err) {
-      console.error("Kerberos: TGT refresh failed:", err);
+      logger.error({ err }, "kerberos TGT refresh failed");
     }
   }, REINIT_INTERVAL_MS);
   reinitTimer.unref();
@@ -51,7 +52,7 @@ export async function getSPNEGOToken(serviceFqdn: string): Promise<string> {
     return token;
   } catch (err: unknown) {
     // If token generation fails, try re-kinit and retry once
-    console.warn("Kerberos: SPNEGO token generation failed, attempting re-kinit:", err);
+    logger.warn({ err }, "kerberos SPNEGO token failed, attempting re-kinit");
     await kinit();
     const client = await kerberosModule.initializeClient(`HTTP@${serviceFqdn}`, {
       mechOID: kerberosModule.GSS_MECH_OID_SPNEGO,

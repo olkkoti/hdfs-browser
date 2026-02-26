@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { logger } from "../logger.js";
 
 export interface AuthProvider {
   authenticate(username: string, password: string): Promise<boolean>;
@@ -82,7 +83,7 @@ class LdapAuthProvider implements AuthProvider {
       // InvalidCredentialsError from ldapts
       if (err instanceof Error && err.name === "InvalidCredentialsError")
         return false;
-      console.error("LDAP authentication error:", err);
+      logger.error({ err }, "LDAP authentication error");
       throw err;
     } finally {
       try {

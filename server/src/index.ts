@@ -4,8 +4,10 @@ import cors from "cors";
 import helmet from "helmet";
 import session from "express-session";
 import rateLimit from "express-rate-limit";
+import pinoHttp from "pino-http";
 import { existsSync } from "fs";
 import { join } from "path";
+import { logger } from "./logger.js";
 import authRouter from "./routes/auth.js";
 import filesRouter from "./routes/files.js";
 import { requireAuth } from "./middleware/auth.js";
@@ -28,6 +30,22 @@ app.use(
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
+    },
+  })
+);
+
+app.use(
+  pinoHttp({
+    logger,
+    serializers: {
+      req: (req) =>
+        logger.isLevelEnabled("debug")
+          ? { method: req.method, url: req.url, headers: req.headers }
+          : { method: req.method, url: req.url },
+      res: (res) =>
+        logger.isLevelEnabled("debug")
+          ? { statusCode: res.statusCode, headers: res.headers }
+          : { statusCode: res.statusCode },
     },
   })
 );
@@ -60,11 +78,11 @@ async function start() {
   await initKerberos();
 
   app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    logger.info({ port: PORT }, "server started");
   });
 }
 
 start().catch((err) => {
-  console.error("Failed to start server:", err);
+  logger.fatal({ err }, "failed to start server");
   process.exit(1);
 });
