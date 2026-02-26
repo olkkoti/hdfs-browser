@@ -40,6 +40,11 @@ export default function FileViewer() {
   const [isBinary, setIsBinary] = useState<boolean | null>(null);
   const [showPermissions, setShowPermissions] = useState(false);
 
+  useEffect(() => {
+    setOffset(0);
+    setIsBinary(null);
+  }, [hdfsPath]);
+
   const { data: statusData, isLoading: statusLoading, error: statusError } = useQuery({
     queryKey: ["fileStatus", hdfsPath],
     queryFn: () => getFileStatus(hdfsPath),
