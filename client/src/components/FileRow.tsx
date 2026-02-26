@@ -76,7 +76,7 @@ export default function FileRow({ file, currentPath, onNavigate, onDelete, onPer
   }
 
   return (
-    <tr className="file-row" onClick={handleClick}>
+    <tr className="file-row" onClick={handleClick} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClick(); } }} tabIndex={0}>
       <td>{icon}</td>
       <td className={isDotEntry || isDir ? "file-name dir-name" : "file-name file-link"}>{file.pathSuffix}</td>
       <td>{isDotEntry ? "" : isDir ? "-" : formatSize(file.length)}</td>
