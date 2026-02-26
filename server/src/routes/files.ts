@@ -287,6 +287,10 @@ router.put("/permission", async (req: Request, res: Response) => {
       res.status(400).json({ error: "path and permission are required" });
       return;
     }
+    if (!/^[0-7]{3,4}$/.test(permission)) {
+      res.status(400).json({ error: "permission must be a 3 or 4 digit octal string (e.g. 755)" });
+      return;
+    }
     const user = getUser(req);
     await hdfs.setPermission(path, permission, user);
     auditLog({ user, path, permission }, "permission_set");
